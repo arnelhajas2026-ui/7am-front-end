@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/auth.js';
 
 // Isang axios instance na may baseURL. Dito dadaan lahat ng request.
 const api = axios.create({
-  baseURL: import.meta.env.ACCESS_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
 });
 
 // REQUEST interceptor: idikit ang JWT token sa bawat request (kung meron).
