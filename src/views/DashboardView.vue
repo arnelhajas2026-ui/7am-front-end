@@ -13,9 +13,18 @@ const today = new Date().toLocaleDateString('en-PH',{ weekday:'long', month:'lon
 
 async function load(){
   loading.value=true;
-  try { const { data } = await api.get('/reports/dashboard'); d.value = data; }
-  catch { d.value = null; }
-  finally { loading.value=false; }
+  try {
+    const { data } = await api.get('/reports/dashboard');
+    // Safe defaults — iwas crash kung may kulang sa sagot (hal. lumang backend).
+    d.value = {
+      kpi: {}, perMachine: [], topSelling: [], notSelling: [], topExpenses: [],
+      stockAlert: { warehouse: 0, machine: 0, cabinet: 0, total: 0 }, lowWarehouse: [],
+      payables: { total: 0, overdue: 0, items: [] },
+      receivable: { total: 0, overdue: 0, count: 0 }, activeMachines: 0,
+      ...data,
+    };
+  }
+  catch { d.value = null; }  finally { loading.value=false; }
 }
 const peso = (n)=> '₱'+Number(n||0).toLocaleString('en-PH',{maximumFractionDigits:0});
 const peso2 = (n)=> '₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2});
