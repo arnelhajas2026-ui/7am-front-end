@@ -6,6 +6,7 @@ const bs = ref(null);
 const loading = ref(false);
 const error = ref('');
 const showCash = ref(false);
+const showPayable = ref(false);
 
 async function load(){
   loading.value=true; error.value='';
@@ -31,7 +32,7 @@ onMounted(load);
       <template v-if="showCash">
         <div class="is-row sub"><span>Vending sales in</span><span class="numeric">{{ peso(bs.cashBreakdown.vendingIn) }}</span></div>
         <div class="is-row sub"><span>Customer payments in</span><span class="numeric">{{ peso(bs.cashBreakdown.customerIn) }}</span></div>
-        <div class="is-row sub"><span>Purchases out</span><span class="numeric">({{ peso(bs.cashBreakdown.purchasesOut) }})</span></div>
+        <div class="is-row sub"><span>Purchase payments out</span><span class="numeric">({{ peso(bs.cashBreakdown.purchasePaymentsOut) }})</span></div>
         <div class="is-row sub"><span>Supplier payments out</span><span class="numeric">({{ peso(bs.cashBreakdown.supplierOut) }})</span></div>
         <div class="is-row sub"><span>Expenses out</span><span class="numeric">({{ peso(bs.cashBreakdown.expensesOut) }})</span></div>
       </template>
@@ -41,7 +42,11 @@ onMounted(load);
 
       <!-- Liabilities -->
       <p class="section-eyebrow mb-2 mt-3">Liabilities</p>
-      <div class="is-row"><span>Accounts Payable (suppliers)</span><span class="numeric">{{ peso(bs.liabilities.accountsPayable) }}</span></div>
+      <div class="is-row"><span>Accounts Payable <button class="btn btn-ghost btn-sm py-0" @click="showPayable=!showPayable">{{ showPayable ? '−' : 'ⓘ' }}</button></span><span class="numeric">{{ peso(bs.liabilities.accountsPayable) }}</span></div>
+      <template v-if="showPayable">
+        <div class="is-row sub"><span>Merchandise (unpaid purchases)</span><span class="numeric">{{ peso(bs.payableBreakdown?.merchandise) }}</span></div>
+        <div class="is-row sub"><span>Machine procurement</span><span class="numeric">{{ peso(bs.payableBreakdown?.machine) }}</span></div>
+      </template>
       <div class="is-row total"><span>Total Liabilities</span><span class="numeric">{{ peso(bs.liabilities.total) }}</span></div>
 
       <!-- Equity -->
