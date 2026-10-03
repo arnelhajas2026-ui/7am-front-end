@@ -12,6 +12,26 @@ const expenseText = ref('');
 const currencyText = ref('');
 const referenceText = ref('');
 
+// --- Clear test data (danger zone) ---
+const clearScope = ref('transactions');
+const clearConfirm = ref('');
+const clearing = ref(false);
+const clearResult = ref(null);
+
+async function clearTestData(){
+  if (clearConfirm.value !== 'CLEAR') { error.value = 'I-type ang CLEAR para kumpirmahin.'; return; }
+  const label = clearScope.value === 'all'
+    ? 'transactions AT master data (products, machines, customers, suppliers)'
+    : 'lahat ng test transactions';
+  if (!confirm(`Clear ${label}? Hindi na ito maibabalik. Ang Users at Settings ay mananatili.`)) return;
+  clearing.value = true; error.value=''; clearResult.value=null;
+  try {
+    const { data } = await api.post('/admin/clear-test-data', { scope: clearScope.value, confirm: 'CLEAR' });
+    clearResult.value = data; clearConfirm.value='';
+  } catch(e){ error.value = e.response?.data?.message || 'Could not clear data.'; }
+  finally { clearing.value=false; }
+}
+
 async function load(){
   loading.value=true; error.value='';
   try {
@@ -70,6 +90,29 @@ onMounted(load);
           <div class="text-muted small mt-1">Used for autocomplete suggestions on the Products page.</div></div>
 
         <button class="btn btn-primary" :disabled="saving" @click="save">{{ saving ? 'Saving…' : 'Save settings' }}</button>
+      </div>
+    </div>
+
+    <!-- Danger zone: clear test data -->
+    <div class="card mt-4" style="border-color:#F3C7C7">
+      <div class="card-body">
+        <p class="section-eyebrow mb-1" style="color:var(--bad)">Danger zone — Clear test data</p>
+        <p class="text-muted small mb-3">Burahin ang mga test record para mag-fresh ulit para sa testing. Ang <strong>Users</strong> at <strong>Settings</strong> ay HINDI mabubura. Hindi na ito maibabalik.</p>
+        <div class="row g-2 align-items-end">
+          <div class="col-12 col-md-6">
+            <label class="form-label">Ano ang bubura</label>
+            <select v-model="clearScope" class="form-select">
+              <option value="transactions">Transactions lang (panatilihin ang products, machines, customers, suppliers)</option>
+              <option value="all">Lahat — transactions + master data</option>
+            </select>
+          </div>
+          <div class="col-8 col-md-4"><label class="form-label">I-type ang CLEAR</label><input v-model="clearConfirm" class="form-control" placeholder="CLEAR" /></div>
+          <div class="col-4 col-md-2"><button class="btn btn-danger7 w-100" :disabled="clearing || clearConfirm!=='CLEAR'" @click="clearTestData">{{ clearing ? 'Clearing…' : 'Clear' }}</button></div>
+        </div>
+        <div v-if="clearResult" class="alert alert-success py-2 mt-3 mb-0">
+          Na-clear ang {{ clearResult.total }} record(s). Fresh na para sa testing.
+          <span class="d-block small text-muted">{{ Object.entries(clearResult.cleared).filter(([,n])=>n>0).map(([k,n])=>k+': '+n).join(' · ') || 'Walang records na binura.' }}</span>
+        </div>
       </div>
     </div>
   </div>
