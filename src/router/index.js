@@ -16,6 +16,10 @@ import ReconciliationView from '../views/ReconciliationView.vue';
 import ExpensesView from '../views/ExpensesView.vue';
 import ReportsView from '../views/ReportsView.vue';
 import BalanceSheetView from '../views/BalanceSheetView.vue';
+import ChartOfAccountsView from '../views/ChartOfAccountsView.vue';
+import CostCentersView from '../views/CostCentersView.vue';
+import JournalEntryView from '../views/JournalEntryView.vue';
+import GeneralLedgerView from '../views/GeneralLedgerView.vue';
 import QuotationsView from '../views/QuotationsView.vue';
 import SalesOrdersView from '../views/SalesOrdersView.vue';
 import PaymentComparisonView from '../views/PaymentComparisonView.vue';
@@ -38,6 +42,10 @@ const routes = [
   { path: '/expenses', name: 'expenses', component: ExpensesView, meta: { requiresAuth: true, module: 'expenses' } },
   { path: '/reports', name: 'reports', component: ReportsView, meta: { requiresAuth: true, module: 'reports' } },
   { path: '/balance-sheet', name: 'balancesheet', component: BalanceSheetView, meta: { requiresAuth: true, module: 'reports' } },
+  { path: '/coa', name: 'coa', component: ChartOfAccountsView, meta: { requiresAuth: true, module: 'accounting' } },
+  { path: '/cost-centers', name: 'costcenters', component: CostCentersView, meta: { requiresAuth: true, module: 'accounting' } },
+  { path: '/journal', name: 'journal', component: JournalEntryView, meta: { requiresAuth: true, module: 'accounting' } },
+  { path: '/general-ledger', name: 'generalledger', component: GeneralLedgerView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/quotations', name: 'quotations', component: QuotationsView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/sales-orders', name: 'salesorders', component: SalesOrdersView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/payment-compare', name: 'paymentcompare', component: PaymentComparisonView, meta: { requiresAuth: true, module: 'sales' } },

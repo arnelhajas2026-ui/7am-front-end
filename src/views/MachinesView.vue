@@ -5,12 +5,13 @@ import api from '../services/api.js';
 const items = ref([]);
 const products = ref([]);
 const customers = ref([]);
+const costCenters = ref([]);
 const loading = ref(false);
 const error = ref('');
 const showForm = ref(false);
 const saving = ref(false);
 
-const blank = () => ({ id:null, serialNumber:'', deviceId:'', locationName:'', customer:'', status:'ACTIVE', planogram:[] });
+const blank = () => ({ id:null, serialNumber:'', deviceId:'', locationName:'', customer:'', status:'ACTIVE', costCenter:'', planogram:[] });
 const form = ref(blank());
 
 function reset(){ form.value = blank(); showForm.value=false; }
@@ -20,8 +21,8 @@ function removeSlot(i){ form.value.planogram.splice(i,1); }
 async function load(){
   loading.value=true; error.value='';
   try {
-    const [m,p,c] = await Promise.all([ api.get('/machines'), api.get('/products'), api.get('/customers') ]);
-    items.value = m.data.machines; products.value = p.data.products; customers.value = c.data.customers;
+    const [m,p,c,cc] = await Promise.all([ api.get('/machines'), api.get('/products'), api.get('/customers'), api.get('/cost-centers') ]);
+    items.value = m.data.machines; products.value = p.data.products; customers.value = c.data.customers; costCenters.value = cc.data.costCenters;
   } catch(e){ error.value = e.response?.data?.message || 'Could not load machines.'; }
   finally { loading.value=false; }
 }
@@ -38,7 +39,7 @@ async function save(){
 function edit(row){
   form.value = {
     id:row._id, serialNumber:row.serialNumber, deviceId:row.deviceId, locationName:row.locationName,
-    customer:row.customer?._id || '', status:row.status,
+    customer:row.customer?._id || '', status:row.status, costCenter:row.costCenter || '',
     planogram:(row.planogram||[]).map(s=>({ channel:s.channel, product:s.product||'' })),
   };
   showForm.value=true;
@@ -68,6 +69,9 @@ onMounted(load);
               <option v-for="c in customers" :key="c._id" :value="c._id">{{ c.name }}</option></select></div>
           <div class="col-12 col-md-6"><label class="form-label">Status</label>
             <select v-model="form.status" class="form-select"><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select></div>
+          <div class="col-6 col-md-4"><label class="form-label">Cost Center</label>
+            <select v-model="form.costCenter" class="form-select"><option value="">—</option>
+              <option v-for="cc in costCenters" :key="cc._id" :value="cc.code">{{ cc.code }} · {{ cc.name }}</option></select></div>
         </div>
 
         <div class="d-flex align-items-center justify-content-between mt-3 mb-1">
@@ -97,7 +101,7 @@ onMounted(load);
               <span class="text-muted small ms-1">{{ row.machineId }}</span>
               <span class="badge7 ms-1" :class="row.status==='ACTIVE' ? 'emp' : 'off'">{{ row.status }}</span></div>
             <div class="text-muted small">
-              {{ row.deviceId || 'no device id' }} · {{ row.customer?.name || 'no customer' }} · {{ row.planogram?.length || 0 }} slots
+              {{ row.deviceId || 'no device id' }} · {{ row.costCenter || 'no cost center' }} · {{ row.planogram?.length || 0 }} slots
             </div>
           </div>
           <button class="btn btn-ghost btn-sm" @click="edit(row)">Edit</button>

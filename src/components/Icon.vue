@@ -23,6 +23,9 @@ const paths = {
   order: '<path d="M9 3h6l1 4H8zM6 7h12l1 14H5z"/><path d="M9 12h6"/>',
   exchange: '<path d="M4 7h13l-3-3M20 17H7l3 3"/><circle cx="12" cy="12" r="9" opacity="0"/>',
   check: '<path d="M4 12l5 5L20 6"/>',
+  journal: '<path d="M5 3h11l3 3v15H5z"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+  target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
+  book: '<path d="M4 4h13a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2V4z"/><path d="M4 4a2 2 0 0 0 2 2h13"/>',
   ledger: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/>',
 
 };
