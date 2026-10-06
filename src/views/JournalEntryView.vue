@@ -31,6 +31,12 @@ const balanced = computed(()=> totalDebit.value === totalCredit.value && totalDe
 function round(n){ return Math.round(Number(n||0)*100)/100; }
 const peso = (n)=> '₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2});
 
+// Auto-posted entries (Phase 2) — pang-kilala kung saan galing.
+const SRC = { SALES_BATCH:'Sales import', PURCHASE:'Purchase', PURCHASE_PAYMENT:'Purchase payment',
+  EXPENSE:'Expense', SALES_ORDER:'Machine sale', CUSTOMER_PAYMENT:'Customer payment', SUPPLIER_PAYMENT:'Supplier payment' };
+function isManual(e){ const t = e?.source?.type; return !t || t === 'MANUAL'; }
+function srcLabel(e){ const t = e?.source?.type; return isManual(e) ? 'Manual' : (SRC[t] || t); }
+
 async function load(){
   loading.value=true; error.value='';
   try {
@@ -114,6 +120,7 @@ onMounted(load);
     <div v-if="detail" class="card mb-4"><div class="card-body">
       <div class="d-flex justify-content-between align-items-start mb-2">
         <div><h5 class="mb-0" style="font-family:var(--font-display)">{{ detail.ref }}
+          <span v-if="!isManual(detail)" class="pill src ms-1">AUTO · {{ srcLabel(detail) }}</span>
           <span class="badge7 ms-1" :class="detail.status==='VOID' ? 'off' : 'emp'">{{ detail.status }}</span></h5>
           <div class="text-muted small">{{ fmtDate(detail.date) }} · {{ detail.memo }}</div></div>
         <button class="btn btn-ghost btn-sm" @click="detail=null">Close</button>
@@ -139,12 +146,14 @@ onMounted(load);
     <div v-for="e in entries" :key="e._id" class="card mb-2"><div class="card-body py-2 d-flex align-items-center gap-3">
       <div class="flex-grow-1" style="cursor:pointer" @click="detail=e">
         <div class="fw-semibold" style="font-family:var(--font-display)">{{ e.ref }}
+          <span v-if="!isManual(e)" class="pill src ms-1">AUTO · {{ srcLabel(e) }}</span>
           <span v-if="e.status==='VOID'" class="badge7 off ms-1">VOID</span>
           <span class="text-muted small ms-1">{{ fmtDate(e.date) }}</span></div>
         <div class="text-muted small">{{ e.memo || (e.lines[0]?.accountName) }} · {{ e.lines.length }} lines</div>
       </div>
       <div class="numeric fw-bold">{{ peso(e.totalDebit) }}</div>
-      <button v-if="e.status!=='VOID'" class="btn btn-ghost btn-sm" @click="voidEntry(e)">Void</button>
+      <!-- Manual entries lang ang puwedeng i-void dito; i-void ang auto-entry sa pinagmulan nitong transaction. -->
+      <button v-if="e.status!=='VOID' && isManual(e)" class="btn btn-ghost btn-sm" @click="voidEntry(e)">Void</button>
     </div></div>
   </div>
 </template>
@@ -156,5 +165,6 @@ onMounted(load);
 .c-amt{ flex:0 0 12%; } .c-desc{ flex:1 1 auto; } .c-x{ flex:0 0 28px; }
 .pill { font-size:.75rem; font-weight:700; padding:.2rem .6rem; border-radius:999px; background:#EAF0F8; color:var(--ink-2); }
 .pill.ok { background:#E5F6EC; color:var(--good); } .pill.warn { background:#FDECEC; color:var(--bad); }
+.pill.src { background:#EEF2FF; color:#4338CA; font-size:.68rem; padding:.12rem .5rem; vertical-align:middle; }
 @media (max-width: 991px){ .je-row{ flex-wrap:wrap; } .c-acct,.c-cc,.c-mac,.c-amt,.c-desc{ flex:1 1 46%; } }
 </style>
