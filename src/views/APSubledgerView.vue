@@ -38,18 +38,19 @@ onMounted(load);
     <div v-if="loading" class="text-muted">Loading…</div>
     <div v-else class="card"><div class="card-body p-0" style="overflow-x:auto">
       <table class="fin-table" style="min-width:620px">
-        <thead><tr><th class="lbl">Supplier</th><th>Purchases</th><th>Billed</th><th>Paid</th><th>Outstanding</th></tr></thead>
+        <thead><tr><th class="lbl">Supplier</th><th>Purchases</th><th>Opening</th><th>Billed</th><th>Paid</th><th>Outstanding</th></tr></thead>
         <tbody>
           <tr v-for="(r,i) in rows" :key="i">
             <td class="lbl">{{ r.supplier }}</td>
             <td class="num">{{ r.count }}</td>
+            <td class="num">{{ peso(r.opening) }}</td>
             <td class="num">{{ peso(r.billed) }}</td>
             <td class="num">{{ peso(r.paid) }}</td>
             <td class="num fw-semibold">{{ peso(r.outstanding) }}</td>
           </tr>
-          <tr v-if="!rows.length"><td colspan="5" class="text-center text-muted py-3">Walang outstanding na payable.</td></tr>
+          <tr v-if="!rows.length"><td colspan="6" class="text-center text-muted py-3">Walang outstanding na payable.</td></tr>
         </tbody>
-        <tfoot v-if="rows.length"><tr class="gp"><td class="lbl" colspan="4">Total payable</td><td class="num fw-bold">{{ peso(total) }}</td></tr></tfoot>
+        <tfoot v-if="rows.length"><tr class="gp"><td class="lbl" colspan="5">Total payable</td><td class="num fw-bold">{{ peso(total) }}</td></tr></tfoot>
       </table>
     </div></div>
   </div>
