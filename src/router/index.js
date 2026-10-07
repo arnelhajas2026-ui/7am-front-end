@@ -29,6 +29,7 @@ import TrialBalanceView from '../views/TrialBalanceView.vue';
 import GLIncomeStatementView from '../views/GLIncomeStatementView.vue';
 import GLBalanceSheetView from '../views/GLBalanceSheetView.vue';
 import CashFlowView from '../views/CashFlowView.vue';
+import FixedAssetsView from '../views/FixedAssetsView.vue';
 import QuotationsView from '../views/QuotationsView.vue';
 import SalesOrdersView from '../views/SalesOrdersView.vue';
 import PaymentComparisonView from '../views/PaymentComparisonView.vue';
@@ -64,6 +65,7 @@ const routes = [
   { path: '/gl-income-statement', name: 'glincome', component: GLIncomeStatementView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/gl-balance-sheet', name: 'glbalancesheet', component: GLBalanceSheetView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/cash-flow', name: 'cashflow', component: CashFlowView, meta: { requiresAuth: true, module: 'accounting' } },
+  { path: '/fixed-assets', name: 'fixedassets', component: FixedAssetsView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/quotations', name: 'quotations', component: QuotationsView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/sales-orders', name: 'salesorders', component: SalesOrdersView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/payment-compare', name: 'paymentcompare', component: PaymentComparisonView, meta: { requiresAuth: true, module: 'sales' } },

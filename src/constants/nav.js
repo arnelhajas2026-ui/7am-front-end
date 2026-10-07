@@ -8,8 +8,11 @@ export const NAV = [
   { name: 'transfers', label: 'Transfers', icon: 'transfer', module: 'inventory',  group: 'Operations' },
   { name: 'reconciliation', label: 'Reconcile', icon: 'scale', module: 'reconciliation', group: 'Operations' },
   { name: 'expenses',  label: 'Expenses',  icon: 'wallet',  module: 'expenses',   group: 'Operations' },
-  { name: 'reports',   label: 'Income Statement', icon: 'chart', module: 'reports', group: 'Insights' },
-  { name: 'balancesheet', label: 'Balance Sheet', icon: 'scale', module: 'reports', group: 'Insights' },
+  // --- Insights group (derived management reports) — HIDDEN for client clarity.
+  //     Para ibalik: alisin lang ang comment sa dalawang linya sa baba.
+  //     (Nakatago lang sa menu; gumagana pa ang routes /reports at /balance-sheet.)
+  // { name: 'reports',   label: 'Income Statement', icon: 'chart', module: 'reports', group: 'Insights' },
+  // { name: 'balancesheet', label: 'Balance Sheet', icon: 'scale', module: 'reports', group: 'Insights' },
 
   { name: 'coa',        label: 'Chart of Accounts', icon: 'book',    module: 'accounting', group: 'Accounting' },
   { name: 'costcenters',label: 'Cost Centers',      icon: 'target',  module: 'accounting', group: 'Accounting' },
@@ -20,6 +23,7 @@ export const NAV = [
   { name: 'subledgerar', label: 'AR Sub-Ledger', icon: 'ledger', module: 'accounting', group: 'Accounting' },
   { name: 'openingbalances', label: 'Opening Balances', icon: 'journal', module: 'accounting', group: 'Accounting' },
   { name: 'periodclose', label: 'Period Close', icon: 'scale', module: 'accounting', group: 'Accounting' },
+  { name: 'fixedassets', label: 'Fixed Assets', icon: 'server', module: 'accounting', group: 'Accounting' },
   { name: 'trialbalance', label: 'Trial Balance', icon: 'ledger', module: 'accounting', group: 'Financial Statements' },
   { name: 'glincome', label: 'Income Statement (GL)', icon: 'chart', module: 'accounting', group: 'Financial Statements' },
   { name: 'glbalancesheet', label: 'Balance Sheet (GL)', icon: 'scale', module: 'accounting', group: 'Financial Statements' },
