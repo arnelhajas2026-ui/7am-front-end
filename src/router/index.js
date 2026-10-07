@@ -25,6 +25,10 @@ import APSubledgerView from '../views/APSubledgerView.vue';
 import ARSubledgerView from '../views/ARSubledgerView.vue';
 import OpeningBalancesView from '../views/OpeningBalancesView.vue';
 import PeriodCloseView from '../views/PeriodCloseView.vue';
+import TrialBalanceView from '../views/TrialBalanceView.vue';
+import GLIncomeStatementView from '../views/GLIncomeStatementView.vue';
+import GLBalanceSheetView from '../views/GLBalanceSheetView.vue';
+import CashFlowView from '../views/CashFlowView.vue';
 import QuotationsView from '../views/QuotationsView.vue';
 import SalesOrdersView from '../views/SalesOrdersView.vue';
 import PaymentComparisonView from '../views/PaymentComparisonView.vue';
@@ -56,6 +60,10 @@ const routes = [
   { path: '/subledger-ar', name: 'subledgerar', component: ARSubledgerView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/opening-balances', name: 'openingbalances', component: OpeningBalancesView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/period-close', name: 'periodclose', component: PeriodCloseView, meta: { requiresAuth: true, module: 'accounting' } },
+  { path: '/trial-balance', name: 'trialbalance', component: TrialBalanceView, meta: { requiresAuth: true, module: 'accounting' } },
+  { path: '/gl-income-statement', name: 'glincome', component: GLIncomeStatementView, meta: { requiresAuth: true, module: 'accounting' } },
+  { path: '/gl-balance-sheet', name: 'glbalancesheet', component: GLBalanceSheetView, meta: { requiresAuth: true, module: 'accounting' } },
+  { path: '/cash-flow', name: 'cashflow', component: CashFlowView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/quotations', name: 'quotations', component: QuotationsView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/sales-orders', name: 'salesorders', component: SalesOrdersView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/payment-compare', name: 'paymentcompare', component: PaymentComparisonView, meta: { requiresAuth: true, module: 'sales' } },
