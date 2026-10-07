@@ -11,6 +11,9 @@ const error = ref('');
 const saving = ref(false);
 const showForm = ref(false);
 const detail = ref(null);
+const fStart = ref('');
+const fEnd = ref('');
+const fSource = ref('');
 
 const postable = computed(()=> accounts.value.filter(a => !a.isHeader && a.active !== false));
 const accByCode = computed(()=> Object.fromEntries(accounts.value.map(a=>[a.code, a])));
@@ -37,13 +40,25 @@ const SRC = { SALES_BATCH:'Sales import', PURCHASE:'Purchase', PURCHASE_PAYMENT:
 function isManual(e){ const t = e?.source?.type; return !t || t === 'MANUAL'; }
 function srcLabel(e){ const t = e?.source?.type; return isManual(e) ? 'Manual' : (SRC[t] || t); }
 
+const SOURCE_TYPES = ['MANUAL','SALES_BATCH','SALES_COGS','PURCHASE','PURCHASE_PAYMENT','EXPENSE','SALES_ORDER','CUSTOMER_PAYMENT','SUPPLIER_PAYMENT','INV_ADJUST','DEPRECIATION','ASSET_DISPOSAL','OPENING_BALANCE'];
+const shownEntries = computed(()=> entries.value.filter(e => !fSource.value || (e.source?.type || 'MANUAL') === fSource.value));
+
 async function load(){
   loading.value=true; error.value='';
   try {
-    const [ac,ma,je] = await Promise.all([ api.get('/accounts-coa'), api.get('/machines'), api.get('/journal') ]);
+    const params = {}; if(fStart.value) params.start = fStart.value; if(fEnd.value) params.end = fEnd.value;
+    const [ac,ma,je] = await Promise.all([ api.get('/accounts-coa'), api.get('/machines'), api.get('/journal', { params }) ]);
     accounts.value = ac.data.accounts; machines.value = ma.data.machines; entries.value = je.data.entries;
   } catch(e){ error.value = e.response?.data?.message || 'Could not load.'; }
   finally { loading.value=false; }
+}
+function downloadCSV(){
+  const esc = (v)=>{ const s=String(v??''); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const rows = [['Ref','Date','Source','Memo','Total','Status']];
+  for(const e of shownEntries.value) rows.push([e.ref, fmtDate(e.date), srcLabel(e), e.memo||'', e.totalDebit, e.status]);
+  const csv = rows.map(r=> r.map(esc).join(',')).join('\n');
+  const blob = new Blob(['﻿'+csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='journal-entries.csv'; a.click(); URL.revokeObjectURL(url);
 }
 function openNew(){ form.value = { date: today, memo:'', lines:[ blankLine(), blankLine() ] }; showForm.value=true; detail.value=null; window.scrollTo({top:0,behavior:'smooth'}); }
 function close(){ showForm.value=false; }
@@ -139,11 +154,21 @@ onMounted(load);
       </table>
     </div></div>
 
-    <!-- List -->
-    <p class="section-eyebrow">Recent entries</p>
+    <!-- List + filters -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <p class="section-eyebrow mb-0">Recent entries</p>
+      <button class="btn btn-ghost btn-sm" @click="downloadCSV">⤓ CSV</button>
+    </div>
+    <div class="row g-2 my-2">
+      <div class="col-6 col-md-3"><input v-model="fStart" type="date" class="form-control form-control-sm" @change="load" placeholder="From" /></div>
+      <div class="col-6 col-md-3"><input v-model="fEnd" type="date" class="form-control form-control-sm" @change="load" placeholder="To" /></div>
+      <div class="col-12 col-md-4"><select v-model="fSource" class="form-select form-select-sm">
+        <option value="">All sources</option>
+        <option v-for="s in SOURCE_TYPES" :key="s" :value="s">{{ s === 'MANUAL' ? 'Manual' : (SRC[s] || s) }}</option></select></div>
+    </div>
     <div v-if="loading" class="text-muted">Loading…</div>
-    <div v-else-if="!entries.length" class="card"><div class="card-body text-muted text-center py-4">No journal entries yet.</div></div>
-    <div v-for="e in entries" :key="e._id" class="card mb-2"><div class="card-body py-2 d-flex align-items-center gap-3">
+    <div v-else-if="!shownEntries.length" class="card"><div class="card-body text-muted text-center py-4">Walang journal entry sa filter na ito.</div></div>
+    <div v-for="e in shownEntries" :key="e._id" class="card mb-2"><div class="card-body py-2 d-flex align-items-center gap-3">
       <div class="flex-grow-1" style="cursor:pointer" @click="detail=e">
         <div class="fw-semibold" style="font-family:var(--font-display)">{{ e.ref }}
           <span v-if="!isManual(e)" class="pill src ms-1">AUTO · {{ srcLabel(e) }}</span>

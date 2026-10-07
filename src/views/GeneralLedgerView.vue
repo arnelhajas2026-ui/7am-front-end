@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtDate } from '../utils/datetime.js';
+import { BRAND } from '../constants/brand.js';
 
 const accounts = ref([]);
 const costCenters = ref([]);
@@ -41,15 +42,37 @@ async function run(){
   finally { loading.value=false; }
 }
 onMounted(async ()=>{ await loadRefs(); await run(); });
+
+function printPage(){ window.print(); }
+function downloadCSV(){
+  const esc = (v)=>{ const s=String(v??''); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  let rows;
+  if(selAccount.value){
+    rows = [['Date','Ref','Cost Center','Description','Debit','Credit','Balance']];
+    for(const r of detailRows.value) rows.push([fmtDate(r.date), r.ref, r.costCenter||'', r.description||r.memo||'', r.debit, r.credit, r.balance]);
+  } else {
+    rows = [['Code','Account','Type','Debit','Credit','Balance']];
+    for(const r of summary.value) rows.push([r.code, r.name, r.type, r.debit, r.credit, r.balance]);
+  }
+  const csv = rows.map(r=> r.map(esc).join(',')).join('\n');
+  const blob = new Blob(['﻿'+csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='general-ledger.csv'; a.click(); URL.revokeObjectURL(url);
+}
 </script>
 
 <template>
   <div>
-    <h3 class="mb-1">General Ledger</h3>
-    <p class="text-muted">Balances built from posted journal entries. Pick an account for its detailed ledger.</p>
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-1">
+      <h3 class="mb-0">General Ledger</h3>
+      <div class="d-flex gap-2 no-print">
+        <button class="btn btn-ghost btn-sm" @click="downloadCSV">⤓ CSV</button>
+        <button class="btn btn-ghost btn-sm" @click="printPage">🖨 Print / PDF</button>
+      </div>
+    </div>
+    <p class="text-muted no-print">Balances built from posted journal entries. Pick an account for its detailed ledger.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
 
-    <div class="row g-2 mb-3">
+    <div class="row g-2 mb-3 no-print">
       <div class="col-12 col-md-4"><label class="form-label">Account</label>
         <select v-model="selAccount" class="form-select" @change="run">
           <option value="">— All accounts (summary) —</option>
@@ -106,5 +129,27 @@ onMounted(async ()=>{ await loadRefs(); await run(); });
         </table>
       </div></div>
     </template>
+
+    <!-- Print sheet -->
+    <div class="print-sheet">
+      <div class="print-head"><div class="ph-name">{{ BRAND.name }}</div>
+        <div class="ph-sub">General Ledger{{ selAccount ? ' · ' + (detailMeta?.code) + ' ' + (detailMeta?.name) : ' · Summary' }}
+          <span v-if="start || end"> · {{ start || '…' }} to {{ end || '…' }}</span><span v-if="selCostCenter"> · {{ selCostCenter }}</span></div></div>
+      <table v-if="selAccount" class="fin-table">
+        <thead><tr><th class="lbl">Date</th><th class="lbl">Ref</th><th class="lbl">Cost Ctr</th><th class="lbl">Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+        <tbody>
+          <tr v-for="(r,i) in detailRows" :key="i"><td class="lbl">{{ fmtDate(r.date) }}</td><td class="lbl">{{ r.ref }}</td><td class="lbl">{{ r.costCenter||'—' }}</td>
+            <td class="lbl">{{ r.description||r.memo }}</td><td class="num">{{ r.debit?peso(r.debit):'' }}</td><td class="num">{{ r.credit?peso(r.credit):'' }}</td><td class="num">{{ peso(r.balance) }}</td></tr>
+          <tr><td class="lbl" colspan="6"><strong>Ending balance</strong></td><td class="num"><strong>{{ peso(detailBalance) }}</strong></td></tr>
+        </tbody>
+      </table>
+      <table v-else class="fin-table">
+        <thead><tr><th class="lbl">Code</th><th class="lbl">Account</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+        <tbody>
+          <tr v-for="r in summary" :key="r.code"><td class="lbl">{{ r.code }}</td><td class="lbl">{{ r.name }}</td>
+            <td class="num">{{ peso(r.debit) }}</td><td class="num">{{ peso(r.credit) }}</td><td class="num">{{ peso(r.balance) }}</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>

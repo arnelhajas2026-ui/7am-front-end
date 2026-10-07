@@ -24,12 +24,24 @@ async function load() {
   } catch (e) { error.value = e.response?.data?.message || 'Could not load inventory sub-ledger.'; }
   finally { loading.value = false; }
 }
+function downloadCSV() {
+  const esc = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const out = [['SKU', 'Product', 'Qty', 'Avg Cost', 'Value']];
+  for (const r of rows.value) out.push([r.sku, r.name, r.qty, r.avgCost, r.value]);
+  out.push(['', '', '', 'TOTAL', total.value]);
+  const csv = out.map((r) => r.map(esc).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'inventory-subledger.csv'; a.click(); URL.revokeObjectURL(url);
+}
 onMounted(load);
 </script>
 
 <template>
   <div>
-    <h3 class="mb-1">Inventory Sub-Ledger</h3>
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-1">
+      <h3 class="mb-0">Inventory Sub-Ledger</h3>
+      <button class="btn btn-ghost btn-sm" @click="downloadCSV">⤓ CSV</button>
+    </div>
     <p class="text-muted">FIFO valuation per product. Dapat tumugma sa GL control account na Merchandise Inventory (1100).</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
 

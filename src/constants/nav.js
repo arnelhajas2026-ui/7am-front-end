@@ -14,6 +14,7 @@ export const NAV = [
   // { name: 'reports',   label: 'Income Statement', icon: 'chart', module: 'reports', group: 'Insights' },
   // { name: 'balancesheet', label: 'Balance Sheet', icon: 'scale', module: 'reports', group: 'Insights' },
 
+  { name: 'accountingoverview', label: 'Overview', icon: 'grid', module: 'accounting', group: 'Accounting' },
   { name: 'coa',        label: 'Chart of Accounts', icon: 'book',    module: 'accounting', group: 'Accounting' },
   { name: 'costcenters',label: 'Cost Centers',      icon: 'target',  module: 'accounting', group: 'Accounting' },
   { name: 'journal',    label: 'Journal Entry',     icon: 'journal', module: 'accounting', group: 'Accounting' },

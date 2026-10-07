@@ -19,12 +19,24 @@ async function load() {
   } catch (e) { error.value = e.response?.data?.message || 'Could not load AP sub-ledger.'; }
   finally { loading.value = false; }
 }
+function downloadCSV() {
+  const esc = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const out = [['Supplier', 'Purchases', 'Opening', 'Billed', 'Paid', 'Outstanding']];
+  for (const r of rows.value) out.push([r.supplier, r.count, r.opening, r.billed, r.paid, r.outstanding]);
+  out.push(['TOTAL', '', '', '', '', total.value]);
+  const csv = out.map((r) => r.map(esc).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'ap-subledger.csv'; a.click(); URL.revokeObjectURL(url);
+}
 onMounted(load);
 </script>
 
 <template>
   <div>
-    <h3 class="mb-1">Accounts Payable Sub-Ledger</h3>
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-1">
+      <h3 class="mb-0">Accounts Payable Sub-Ledger</h3>
+      <button class="btn btn-ghost btn-sm" @click="downloadCSV">⤓ CSV</button>
+    </div>
     <p class="text-muted">Natitirang utang sa bawat supplier (credit purchases). Dapat tumugma sa GL Accounts Payable (2010).</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
 

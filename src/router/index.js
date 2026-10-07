@@ -30,6 +30,7 @@ import GLIncomeStatementView from '../views/GLIncomeStatementView.vue';
 import GLBalanceSheetView from '../views/GLBalanceSheetView.vue';
 import CashFlowView from '../views/CashFlowView.vue';
 import FixedAssetsView from '../views/FixedAssetsView.vue';
+import AccountingOverviewView from '../views/AccountingOverviewView.vue';
 import QuotationsView from '../views/QuotationsView.vue';
 import SalesOrdersView from '../views/SalesOrdersView.vue';
 import PaymentComparisonView from '../views/PaymentComparisonView.vue';
@@ -52,6 +53,7 @@ const routes = [
   { path: '/expenses', name: 'expenses', component: ExpensesView, meta: { requiresAuth: true, module: 'expenses' } },
   { path: '/reports', name: 'reports', component: ReportsView, meta: { requiresAuth: true, module: 'reports' } },
   { path: '/balance-sheet', name: 'balancesheet', component: BalanceSheetView, meta: { requiresAuth: true, module: 'reports' } },
+  { path: '/accounting-overview', name: 'accountingoverview', component: AccountingOverviewView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/coa', name: 'coa', component: ChartOfAccountsView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/cost-centers', name: 'costcenters', component: CostCentersView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/journal', name: 'journal', component: JournalEntryView, meta: { requiresAuth: true, module: 'accounting' } },
