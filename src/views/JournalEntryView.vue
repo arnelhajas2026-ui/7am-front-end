@@ -224,7 +224,7 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
 
     <!-- List + filters -->
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <p class="section-eyebrow mb-0">Entries</p>
+      <p class="section-eyebrow mb-0">General Journal</p>
       <div class="d-flex gap-2">
         <button class="btn btn-ghost btn-sm" @click="downloadCSV">⤓ CSV</button>
         <button class="btn btn-ghost btn-sm" @click="printJournal">🖨 Print / PDF</button>
@@ -239,18 +239,33 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
     </div>
     <div v-if="loading" class="text-muted">Loading…</div>
     <div v-else-if="!shownEntries.length" class="card"><div class="card-body text-muted text-center py-4">Walang journal entry sa filter na ito.</div></div>
-    <div v-for="e in shownEntries" :key="e._id" class="card mb-2"><div class="card-body py-2 d-flex align-items-center gap-3">
-      <div class="flex-grow-1" style="cursor:pointer" @click="detail=e">
-        <div class="fw-semibold" style="font-family:var(--font-display)">{{ e.ref }}
-          <span v-if="!isManual(e)" class="pill src ms-1">AUTO · {{ srcLabel(e) }}</span>
-          <span v-if="e.status==='VOID'" class="badge7 off ms-1">VOID</span>
-          <span class="text-muted small ms-1">{{ fmtDate(e.date) }}</span></div>
-        <div class="text-muted small">{{ e.memo || (e.lines[0]?.accountName) }} · {{ e.lines.length }} lines</div>
-      </div>
-      <div class="numeric fw-bold">{{ peso(e.totalDebit) }}</div>
-      <button v-if="e.status!=='VOID' && (isManual(e) || isOwner)" class="btn btn-ghost btn-sm" @click.stop="voidEntry(e)">Void</button>
-      <button v-if="e.status==='VOID' && isOwner" class="btn btn-ghost btn-sm" @click.stop="restoreEntry(e)">Restore</button>
+    <div v-else class="card"><div class="card-body p-0" style="overflow-x:auto">
+      <table class="fin-table ruled gj-screen" style="min-width:1000px">
+        <thead><tr>
+          <th class="lbl">Date</th><th class="lbl">Account Code</th><th class="lbl">Accounts</th><th class="lbl">JE</th>
+          <th>Debit Amount</th><th>Credit Amount</th><th class="lbl">Description</th><th class="lbl">Account Type</th><th class="lbl">Particulars</th>
+        </tr></thead>
+        <tbody>
+          <template v-for="e in shownEntries" :key="e._id">
+            <tr v-for="(l,i) in e.lines" :key="e._id+'-'+i" class="gj-line" :class="{ voided: e.status==='VOID' }" @click="detail=e">
+              <td class="lbl">{{ fmtDate(e.date) }}</td>
+              <td class="lbl">{{ l.accountCode }}</td>
+              <td class="lbl">{{ l.accountName }}</td>
+              <td class="lbl"><span class="je-ref">{{ e.ref }}</span>
+                <span v-if="!isManual(e) && i===0" class="pill src ms-1">AUTO</span>
+                <span v-if="e.status==='VOID' && i===0" class="badge7 off ms-1">VOID</span></td>
+              <td class="num">{{ l.debit ? peso(l.debit) : '' }}</td>
+              <td class="num">{{ l.credit ? peso(l.credit) : '' }}</td>
+              <td class="lbl text-muted small">{{ l.description }}</td>
+              <td class="lbl">{{ l.accountType }}</td>
+              <td class="lbl">{{ e.memo }}</td>
+            </tr>
+            <tr class="gj-gap"><td colspan="9"></td></tr>
+          </template>
+        </tbody>
+      </table>
     </div></div>
+    <p class="text-muted small mt-2">{{ shownEntries.length }} entries · i-click ang isang row para buksan (view · edit · void · restore)</p>
 
     <!-- Print sheet: GENERAL JOURNAL (output: PDF via browser print) -->
     <div class="print-sheet">
@@ -301,4 +316,12 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
 .gj-title { font-family:var(--font-display); font-weight:800; font-size:1.25rem; letter-spacing:.04em; }
 .gj-table th { background:#EEF2F7; }
 .gj-spacer td { border:none !important; height:6px; }
+
+/* General Journal on-screen table */
+.gj-screen thead th { background:#EEF2F7; }
+.gj-screen .gj-line { cursor:pointer; }
+.gj-screen .gj-line:hover td { background:#F2F7FD; }
+.gj-screen .gj-line.voided td { opacity:.5; text-decoration:line-through; }
+.gj-screen .gj-gap td { border:none !important; height:5px; background:transparent; padding:0; }
+.gj-screen .je-ref { font-family:var(--font-display); font-weight:700; }
 </style>
