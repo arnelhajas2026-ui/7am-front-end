@@ -41,5 +41,6 @@ export const NAV = [
 
   { name: 'approvals', label: 'Approvals', icon: 'check',  ownerOnly: true,      group: 'Admin' },
   { name: 'accounts',  label: 'Accounts',  icon: 'users',  ownerOnly: true,      group: 'Admin' },
+  { name: 'audittrail', label: 'Audit Trail', icon: 'book', ownerOnly: true,     group: 'Admin' },
   { name: 'settings',  label: 'Settings',  icon: 'gear',   ownerOnly: true,      group: 'Admin' },
 ];

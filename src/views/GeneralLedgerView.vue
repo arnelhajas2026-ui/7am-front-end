@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtDate } from '../utils/datetime.js';
 import { BRAND } from '../constants/brand.js';
+import { exportCSV, stampPH } from '../utils/exporters.js';
 
 const accounts = ref([]);
 const costCenters = ref([]);
@@ -45,18 +46,18 @@ onMounted(async ()=>{ await loadRefs(); await run(); });
 
 function printPage(){ window.print(); }
 function downloadCSV(){
-  const esc = (v)=>{ const s=String(v??''); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
-  let rows;
+  let rows, name;
   if(selAccount.value){
-    rows = [['Date','Ref','Cost Center','Description','Debit','Credit','Balance']];
-    for(const r of detailRows.value) rows.push([fmtDate(r.date), r.ref, r.costCenter||'', r.description||r.memo||'', r.debit, r.credit, r.balance]);
+    rows = [['Date','JE','Cost Center','Description','Debit','Credit','Balance']];
+    for(const r of detailRows.value) rows.push([ new Date(r.date).toLocaleDateString('en-CA',{timeZone:'Asia/Manila'}), r.ref, r.costCenter||'', r.description||r.memo||'', Number(r.debit)||0, Number(r.credit)||0, Number(r.balance)||0 ]);
+    rows.push(['','','','Ending balance','','', Number(detailBalance.value)||0]);
+    name = `general-ledger_${(detailMeta.value?.code)||'account'}_${stampPH()}.csv`;
   } else {
     rows = [['Code','Account','Type','Debit','Credit','Balance']];
-    for(const r of summary.value) rows.push([r.code, r.name, r.type, r.debit, r.credit, r.balance]);
+    for(const r of summary.value) rows.push([ r.code, r.name, r.type, Number(r.debit)||0, Number(r.credit)||0, Number(r.balance)||0 ]);
+    name = `general-ledger_summary_${stampPH()}.csv`;
   }
-  const csv = rows.map(r=> r.map(esc).join(',')).join('\n');
-  const blob = new Blob(['﻿'+csv], { type:'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='general-ledger.csv'; a.click(); URL.revokeObjectURL(url);
+  exportCSV(name, rows);
 }
 </script>
 
@@ -89,7 +90,7 @@ function downloadCSV(){
 
     <!-- Summary (all accounts) -->
     <div v-else-if="!selAccount" class="card"><div class="card-body p-0" style="overflow-x:auto">
-      <table class="fin-table" style="min-width:640px">
+      <table class="fin-table ruled" style="min-width:640px">
         <thead><tr><th class="lbl">Code</th><th class="lbl">Account</th><th class="lbl">Type</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
         <tbody>
           <tr v-for="r in summary" :key="r.code">
@@ -112,7 +113,7 @@ function downloadCSV(){
         <div>Ending balance: <strong class="numeric">{{ peso(detailBalance) }}</strong></div>
       </div>
       <div class="card"><div class="card-body p-0" style="overflow-x:auto">
-        <table class="fin-table" style="min-width:680px">
+        <table class="fin-table ruled" style="min-width:680px">
           <thead><tr><th class="lbl">Date</th><th class="lbl">Ref</th><th class="lbl">Cost Ctr</th><th class="lbl">Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
           <tbody>
             <tr v-for="(r,i) in detailRows" :key="i">
@@ -135,7 +136,7 @@ function downloadCSV(){
       <div class="print-head"><div class="ph-name">{{ BRAND.name }}</div>
         <div class="ph-sub">General Ledger{{ selAccount ? ' · ' + (detailMeta?.code) + ' ' + (detailMeta?.name) : ' · Summary' }}
           <span v-if="start || end"> · {{ start || '…' }} to {{ end || '…' }}</span><span v-if="selCostCenter"> · {{ selCostCenter }}</span></div></div>
-      <table v-if="selAccount" class="fin-table">
+      <table v-if="selAccount" class="fin-table ruled">
         <thead><tr><th class="lbl">Date</th><th class="lbl">Ref</th><th class="lbl">Cost Ctr</th><th class="lbl">Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
         <tbody>
           <tr v-for="(r,i) in detailRows" :key="i"><td class="lbl">{{ fmtDate(r.date) }}</td><td class="lbl">{{ r.ref }}</td><td class="lbl">{{ r.costCenter||'—' }}</td>
@@ -143,7 +144,7 @@ function downloadCSV(){
           <tr><td class="lbl" colspan="6"><strong>Ending balance</strong></td><td class="num"><strong>{{ peso(detailBalance) }}</strong></td></tr>
         </tbody>
       </table>
-      <table v-else class="fin-table">
+      <table v-else class="fin-table ruled">
         <thead><tr><th class="lbl">Code</th><th class="lbl">Account</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
         <tbody>
           <tr v-for="r in summary" :key="r.code"><td class="lbl">{{ r.code }}</td><td class="lbl">{{ r.name }}</td>

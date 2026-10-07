@@ -31,6 +31,7 @@ import GLBalanceSheetView from '../views/GLBalanceSheetView.vue';
 import CashFlowView from '../views/CashFlowView.vue';
 import FixedAssetsView from '../views/FixedAssetsView.vue';
 import AccountingOverviewView from '../views/AccountingOverviewView.vue';
+import AuditTrailView from '../views/AuditTrailView.vue';
 import QuotationsView from '../views/QuotationsView.vue';
 import SalesOrdersView from '../views/SalesOrdersView.vue';
 import PaymentComparisonView from '../views/PaymentComparisonView.vue';
@@ -74,6 +75,7 @@ const routes = [
   { path: '/customer-ledger', name: 'customerledger', component: CustomerLedgerView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/approvals', name: 'approvals', component: ApprovalsView, meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/accounts',  name: 'accounts',  component: AccountsView,  meta: { requiresAuth: true, ownerOnly: true } },
+  { path: '/audit',     name: 'audittrail', component: AuditTrailView, meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/settings',  name: 'settings',  component: SettingsView,  meta: { requiresAuth: true, ownerOnly: true } },
 ];
 

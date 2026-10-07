@@ -393,6 +393,13 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-display); letter-spacing:-.015em; }
 .fin-table tr.gp td, .fin-table tr.ibt td { font-weight:700; border-top:1px solid var(--line); }
 .fin-table tr.net td { font-weight:800; border-top:2px solid var(--ink); font-family:var(--font-display); }
 
+/* Ruled variant — vertical + horizontal gridlines (hal. General Ledger, mirror ng Journal look). */
+.fin-table.ruled { border:1px solid var(--line); }
+.fin-table.ruled th, .fin-table.ruled td { border-right:1px solid var(--line); }
+.fin-table.ruled th:last-child, .fin-table.ruled td:last-child { border-right:none; }
+.fin-table.ruled tbody tr td { border-bottom:1px solid var(--line); }
+.print-sheet .fin-table.ruled th, .print-sheet .fin-table.ruled td { border:1px solid #bbb; }
+
 /* login logo + password toggle + credit */
 .login-logo { width:80px; height:80px; border-radius:50%; border:2px solid rgba(255,255,255,.55); background:#fff; margin-bottom:20px; object-fit:contain; }
 .login-logo-sm { width:64px; height:64px; border-radius:50%; border:2px solid var(--line); background:#fff; object-fit:contain; display:block; margin:0 auto 16px; }
