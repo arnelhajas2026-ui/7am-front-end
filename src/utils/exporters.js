@@ -1,9 +1,8 @@
-// Shared export helpers. Output formats: CSV (download) + PDF (native browser print + .print-sheet).
-// Walang third-party dependency — plain CSV Blob lang.
+// Export helpers.
+//  - exportCSV: plain CSV download (ginagamit pa ng Audit Trail).
+//  - downloadFromApi: kukunin ang file mula sa backend export endpoint (PDF/Word/Excel)
+//    dala ang JWT (kaya via axios blob, hindi plain <a href>).
 
-// Gawing CSV mula sa array-of-arrays (AOA) at i-download. May UTF-8 BOM para tama ang
-// encoding kapag binuksan sa Excel.
-//   rows : Array<Array<string|number>>  — unang row(s) pwedeng header; empty array = blank line
 export function exportCSV(filename, rows) {
   const esc = (v) => {
     const s = String(v ?? '');
@@ -11,13 +10,26 @@ export function exportCSV(filename, rows) {
   };
   const csv = rows.map((r) => (Array.isArray(r) ? r.map(esc).join(',') : '')).join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  triggerDownload(blob, filename);
+}
+
+// api = axios instance (may JWT interceptor); url + params -> i-download ang resulting file.
+export async function downloadFromApi(api, url, params, fallbackName) {
+  const res = await api.get(url, { params, responseType: 'blob' });
+  let name = fallbackName;
+  const cd = res.headers?.['content-disposition'] || '';
+  const m = /filename="?([^"]+)"?/.exec(cd);
+  if (m) name = m[1];
+  triggerDownload(new Blob([res.data]), name);
+}
+
+function triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
 
-// Helper: today stamp para sa filename (Asia/Manila), hal. 2026-10-07
 export function stampPH() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 }

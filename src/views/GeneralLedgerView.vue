@@ -2,8 +2,8 @@
 import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtDate } from '../utils/datetime.js';
-import { BRAND } from '../constants/brand.js';
-import { exportCSV, stampPH } from '../utils/exporters.js';
+import { downloadFromApi } from '../utils/exporters.js';
+import ExportDialog from '../components/ExportDialog.vue';
 
 const accounts = ref([]);
 const costCenters = ref([]);
@@ -13,6 +13,8 @@ const start = ref('');
 const end = ref('');
 const loading = ref(false);
 const error = ref('');
+const showExport = ref(false);
+const exporting = ref(false);
 
 const summary = ref([]);
 const detailRows = ref([]);
@@ -44,20 +46,20 @@ async function run(){
 }
 onMounted(async ()=>{ await loadRefs(); await run(); });
 
-function printPage(){ window.print(); }
-function downloadCSV(){
-  let rows, name;
-  if(selAccount.value){
-    rows = [['Date','JE','Cost Center','Description','Debit','Credit','Balance']];
-    for(const r of detailRows.value) rows.push([ new Date(r.date).toLocaleDateString('en-CA',{timeZone:'Asia/Manila'}), r.ref, r.costCenter||'', r.description||r.memo||'', Number(r.debit)||0, Number(r.credit)||0, Number(r.balance)||0 ]);
-    rows.push(['','','','Ending balance','','', Number(detailBalance.value)||0]);
-    name = `general-ledger_${(detailMeta.value?.code)||'account'}_${stampPH()}.csv`;
-  } else {
-    rows = [['Code','Account','Type','Debit','Credit','Balance']];
-    for(const r of summary.value) rows.push([ r.code, r.name, r.type, Number(r.debit)||0, Number(r.credit)||0, Number(r.balance)||0 ]);
-    name = `general-ledger_summary_${stampPH()}.csv`;
-  }
-  exportCSV(name, rows);
+// Export (PDF / Word / Excel) via backend — sinusunod ang kasalukuyang account + range.
+async function onExport({ format, orientation, paper }){
+  exporting.value=true; error.value='';
+  try {
+    const params = { format, orientation, paper };
+    if(selAccount.value) params.account = selAccount.value;
+    if(selCostCenter.value) params.costCenter = selCostCenter.value;
+    if(start.value) params.start = start.value;
+    if(end.value) params.end = end.value;
+    const base = selAccount.value ? `general-ledger_${selAccount.value}` : 'general-ledger_summary';
+    await downloadFromApi(api, '/ledger/export', params, `${base}.${format==='docx'?'docx':format==='xlsx'?'xlsx':'pdf'}`);
+    showExport.value=false;
+  } catch(e){ error.value = e.response?.data?.message || 'Could not export.'; }
+  finally { exporting.value=false; }
 }
 </script>
 
@@ -65,15 +67,12 @@ function downloadCSV(){
   <div>
     <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-1">
       <h3 class="mb-0">General Ledger</h3>
-      <div class="d-flex gap-2 no-print">
-        <button class="btn btn-ghost btn-sm" @click="downloadCSV">⤓ CSV</button>
-        <button class="btn btn-ghost btn-sm" @click="printPage">🖨 Print / PDF</button>
-      </div>
+      <button class="btn btn-ghost btn-sm" @click="showExport=true">⤓ Export (PDF / Word / Excel)</button>
     </div>
-    <p class="text-muted no-print">Balances built from posted journal entries. Pick an account for its detailed ledger.</p>
+    <p class="text-muted">Balances built from posted journal entries. Pick an account for its detailed ledger.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
 
-    <div class="row g-2 mb-3 no-print">
+    <div class="row g-2 mb-3">
       <div class="col-12 col-md-4"><label class="form-label">Account</label>
         <select v-model="selAccount" class="form-select" @change="run">
           <option value="">— All accounts (summary) —</option>
@@ -131,26 +130,8 @@ function downloadCSV(){
       </div></div>
     </template>
 
-    <!-- Print sheet -->
-    <div class="print-sheet">
-      <div class="print-head"><div class="ph-name">{{ BRAND.name }}</div>
-        <div class="ph-sub">General Ledger{{ selAccount ? ' · ' + (detailMeta?.code) + ' ' + (detailMeta?.name) : ' · Summary' }}
-          <span v-if="start || end"> · {{ start || '…' }} to {{ end || '…' }}</span><span v-if="selCostCenter"> · {{ selCostCenter }}</span></div></div>
-      <table v-if="selAccount" class="fin-table ruled">
-        <thead><tr><th class="lbl">Date</th><th class="lbl">Ref</th><th class="lbl">Cost Ctr</th><th class="lbl">Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
-        <tbody>
-          <tr v-for="(r,i) in detailRows" :key="i"><td class="lbl">{{ fmtDate(r.date) }}</td><td class="lbl">{{ r.ref }}</td><td class="lbl">{{ r.costCenter||'—' }}</td>
-            <td class="lbl">{{ r.description||r.memo }}</td><td class="num">{{ r.debit?peso(r.debit):'' }}</td><td class="num">{{ r.credit?peso(r.credit):'' }}</td><td class="num">{{ peso(r.balance) }}</td></tr>
-          <tr><td class="lbl" colspan="6"><strong>Ending balance</strong></td><td class="num"><strong>{{ peso(detailBalance) }}</strong></td></tr>
-        </tbody>
-      </table>
-      <table v-else class="fin-table ruled">
-        <thead><tr><th class="lbl">Code</th><th class="lbl">Account</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
-        <tbody>
-          <tr v-for="r in summary" :key="r.code"><td class="lbl">{{ r.code }}</td><td class="lbl">{{ r.name }}</td>
-            <td class="num">{{ peso(r.debit) }}</td><td class="num">{{ peso(r.credit) }}</td><td class="num">{{ peso(r.balance) }}</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <ExportDialog :visible="showExport" :busy="exporting" default-orientation="portrait"
+      :title="selAccount ? 'Export General Ledger' : 'Export GL Summary'"
+      @confirm="onExport" @close="showExport=false" />
   </div>
 </template>

@@ -3,9 +3,9 @@ import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtDate, fmtDateTime } from '../utils/datetime.js';
 import { useAuthStore } from '../stores/auth.js';
-import { BRAND } from '../constants/brand.js';
-import { exportCSV, stampPH } from '../utils/exporters.js';
+import { downloadFromApi } from '../utils/exporters.js';
 import AccountSelect from '../components/AccountSelect.vue';
+import ExportDialog from '../components/ExportDialog.vue';
 
 const auth = useAuthStore();
 const isOwner = computed(()=> auth.isOwner || auth.isSuperadmin);
@@ -17,17 +17,19 @@ const loading = ref(false);
 const error = ref('');
 const saving = ref(false);
 const showForm = ref(false);
-const editingId = ref(null);        // kapag nag-eedit ng existing entry
+const editingId = ref(null);
+const editingStatus = ref('');     // '' (new) | PARKED | POSTED
 const detail = ref(null);
 const fStart = ref('');
 const fEnd = ref('');
 const fSource = ref('');
+const showExport = ref(false);
+const exporting = ref(false);
 
 const postable = computed(()=> accounts.value.filter(a => !a.isHeader && a.active !== false));
 const accByCode = computed(()=> Object.fromEntries(accounts.value.map(a=>[a.code, a])));
 const machineById = computed(()=> Object.fromEntries(machines.value.map(m=>[m._id, m])));
 
-// Petsa ngayon (Asia/Manila) bilang YYYY-MM-DD.
 function todayPH(){ return new Date().toLocaleDateString('en-CA', { timeZone:'Asia/Manila' }); }
 function isoDatePH(d){ return new Date(d).toLocaleDateString('en-CA', { timeZone:'Asia/Manila' }); }
 
@@ -37,13 +39,12 @@ const form = ref({ date: todayPH(), memo:'', lines:[ blankLine(), blankLine() ] 
 function addLine(){ form.value.lines.push(blankLine()); }
 function removeLine(i){ form.value.lines.splice(i,1); }
 
-// Pagpili ng account — i-default ang description kung wala pa.
-function onAccount(line, acct){
-  if(acct && !line.description) line.description = acct.description || '';
-}
-// Pagpili ng machine — i-lookup ang default cost center nito (editable pa rin).
-function onMachine(line){
-  const m = machineById.value[line.machine];
+function onAccount(line, acct){ if(acct && !line.description) line.description = acct.description || ''; }
+// Machine → i-lookup ang naka-map na default Cost Center (editable pa rin).
+// Explicit handler (hindi umaasa sa v-model/@change ordering) para sigurado ang fill.
+function onMachine(line, machineId){
+  line.machine = machineId;
+  const m = machineById.value[machineId];
   if(m && m.costCenter) line.costCenter = m.costCenter;
 }
 function acctType(line){ return accByCode.value[Number(line.accountCode)]?.type || ''; }
@@ -59,17 +60,13 @@ const SRC = { SALES_BATCH:'Sales import', SALES_COGS:'Sales COGS', PURCHASE:'Pur
   INV_ADJUST:'Inventory adj', DEPRECIATION:'Depreciation', ASSET_DISPOSAL:'Asset disposal', OPENING_BALANCE:'Opening balance' };
 function isManual(e){ const t = e?.source?.type; return !t || t === 'MANUAL'; }
 function srcLabel(e){ const t = e?.source?.type; return isManual(e) ? 'Manual' : (SRC[t] || t); }
+function isParked(e){ return e?.status === 'PARKED'; }
 
 const SOURCE_TYPES = ['MANUAL','SALES_BATCH','SALES_COGS','PURCHASE','PURCHASE_PAYMENT','EXPENSE','SALES_ORDER','CUSTOMER_PAYMENT','SUPPLIER_PAYMENT','INV_ADJUST','DEPRECIATION','ASSET_DISPOSAL','OPENING_BALANCE'];
 const shownEntries = computed(()=> entries.value.filter(e => !fSource.value || (e.source?.type || 'MANUAL') === fSource.value));
-// Para sa print / Excel (General Journal) — POSTED lang, sorted by date asc.
-const journalRows = computed(()=> shownEntries.value.filter(e => e.status === 'POSTED')
-  .slice().sort((a,b)=> new Date(a.date) - new Date(b.date) || String(a.ref).localeCompare(b.ref)));
 
-// Default: current month (Asia/Manila) pagbukas.
 function setCurrentMonth(){
-  const t = todayPH();                 // YYYY-MM-DD
-  const [y,m] = t.split('-');
+  const [y,m] = todayPH().split('-');
   const lastDay = new Date(Number(y), Number(m), 0).getDate();
   fStart.value = `${y}-${m}-01`;
   fEnd.value = `${y}-${m}-${String(lastDay).padStart(2,'0')}`;
@@ -85,30 +82,48 @@ async function load(){
   finally { loading.value=false; }
 }
 
-function openNew(){ form.value = { date: todayPH(), memo:'', lines:[ blankLine(), blankLine() ] }; editingId.value=null; showForm.value=true; detail.value=null; window.scrollTo({top:0,behavior:'smooth'}); }
+function cleanLines(){
+  return form.value.lines
+    .filter(l=> l.accountCode || (Number(l.debit)||0)>0 || (Number(l.credit)||0)>0)
+    .map(l=>({ accountCode:l.accountCode?Number(l.accountCode):undefined, costCenter:l.costCenter||'', machine:l.machine||undefined,
+      debit:Number(l.debit)||0, credit:Number(l.credit)||0, description:l.description||'' }));
+}
+
+function openNew(){ form.value = { date: todayPH(), memo:'', lines:[ blankLine(), blankLine() ] }; editingId.value=null; editingStatus.value=''; showForm.value=true; detail.value=null; window.scrollTo({top:0,behavior:'smooth'}); }
 function openEdit(e){
   form.value = {
     date: isoDatePH(e.date), memo: e.memo || '',
     lines: e.lines.map(l=>({ accountCode: l.accountCode, costCenter: l.costCenter||'',
       machine: l.machine?._id || l.machine || '', debit: l.debit||0, credit: l.credit||0, description: l.description||'' })),
   };
-  editingId.value = e._id; showForm.value=true; detail.value=null; window.scrollTo({top:0,behavior:'smooth'});
+  editingId.value = e._id; editingStatus.value = e.status; showForm.value=true; detail.value=null; window.scrollTo({top:0,behavior:'smooth'});
 }
-function close(){ showForm.value=false; editingId.value=null; }
+function close(){ showForm.value=false; editingId.value=null; editingStatus.value=''; }
 
+const canPark = computed(()=> !editingId.value || editingStatus.value==='PARKED');
+const primaryLabel = computed(()=> editingStatus.value==='POSTED' ? 'Save changes' : 'Post entry');
+
+// Primary action: post (new/parked) o save changes (posted edit).
 async function save(){
   if(!balanced.value){ error.value = 'Hindi balanse — dapat pantay ang Debit at Credit, at hindi zero.'; return; }
   saving.value=true; error.value='';
   try {
-    const lines = form.value.lines
-      .filter(l=> l.accountCode && ((Number(l.debit)||0)>0 || (Number(l.credit)||0)>0))
-      .map(l=>({ accountCode:Number(l.accountCode), costCenter:l.costCenter||'', machine:l.machine||undefined,
-        debit:Number(l.debit)||0, credit:Number(l.credit)||0, description:l.description||'' }));
-    const payload = { date: form.value.date, memo: form.value.memo, lines };
-    if(editingId.value) await api.patch(`/journal/${editingId.value}`, payload);
+    const payload = { date: form.value.date, memo: form.value.memo, lines: cleanLines() };
+    if(editingId.value && editingStatus.value==='POSTED') await api.patch(`/journal/${editingId.value}`, payload);
+    else if(editingId.value && editingStatus.value==='PARKED') await api.post(`/journal/${editingId.value}/post`, payload);
     else await api.post('/journal', payload);
     close(); await load();
   } catch(e){ error.value = e.response?.data?.message || 'Could not save.'; }
+  finally { saving.value=false; }
+}
+// Park: save muna bilang draft (hindi posted). Pwede kahit hindi balanced.
+async function park(){
+  saving.value=true; error.value='';
+  try {
+    const payload = { id: editingStatus.value==='PARKED' ? editingId.value : undefined, date: form.value.date, memo: form.value.memo, lines: cleanLines() };
+    await api.post('/journal/park', payload);
+    close(); await load();
+  } catch(e){ error.value = e.response?.data?.message || 'Could not park.'; }
   finally { saving.value=false; }
 }
 async function voidEntry(e){
@@ -121,20 +136,28 @@ async function restoreEntry(e){
   try { await api.post(`/journal/${e._id}/restore`); await load(); if(detail.value?._id===e._id) detail.value=null; }
   catch(err){ error.value = err.response?.data?.message || 'Could not restore.'; }
 }
+async function discardDraft(e){
+  if(!confirm(`Discard draft ${e.ref}? Hindi na ito mababawi.`)) return;
+  try { await api.delete(`/journal/${e._id}`); await load(); if(detail.value?._id===e._id) detail.value=null; }
+  catch(err){ error.value = err.response?.data?.message || 'Could not discard.'; }
+}
+async function postFromDetail(e){
+  try { await api.post(`/journal/${e._id}/post`, {}); await load(); detail.value=null; }
+  catch(err){ error.value = err.response?.data?.message || 'Could not post (baka hindi pa balanced — buksan sa Edit).'; }
+}
 
-function rangeLabel(){ return `${fStart.value || '…'} to ${fEnd.value || '…'}`; }
-function printJournal(){ window.print(); }
-function downloadCSV(){
-  const header = ['Date','Account Code','Account Name','JE','Debit Amount','Credit Amount','Description','Account Type','Particulars'];
-  const rows = [header];
-  for(const e of journalRows.value){
-    for(const l of e.lines){
-      rows.push([ isoDatePH(e.date), l.accountCode, l.accountName || '', e.ref,
-        Number(l.debit)||0, Number(l.credit)||0, l.description || '', l.accountType || '', e.memo || '' ]);
-    }
-    rows.push([]); // spacer bawat entry
-  }
-  exportCSV(`general-journal_${fStart.value||''}_${fEnd.value||stampPH()}.csv`, rows);
+// Export (PDF / Word / Excel) via backend — kinukuha ang kasalukuyang date range + source.
+async function onExport({ format, orientation, paper }){
+  exporting.value=true; error.value='';
+  try {
+    const params = { format, orientation, paper };
+    if(fStart.value) params.start = fStart.value;
+    if(fEnd.value) params.end = fEnd.value;
+    if(fSource.value) params.source = fSource.value;
+    await downloadFromApi(api, '/journal/export', params, `general-journal.${format==='docx'?'docx':format==='xlsx'?'xlsx':'pdf'}`);
+    showExport.value=false;
+  } catch(e){ error.value = e.response?.data?.message || 'Could not export.'; }
+  finally { exporting.value=false; }
 }
 
 onMounted(async ()=>{ setCurrentMonth(); await load(); });
@@ -149,9 +172,12 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
     <p class="text-muted">Record a balanced journal entry (Debit = Credit). Transactions auto-post here too.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
 
-    <!-- Form (new / edit) -->
+    <!-- Form (new / edit / draft) -->
     <div v-if="showForm" class="card mb-4"><div class="card-body">
-      <p class="section-eyebrow mb-3">{{ editingId ? 'Edit entry' : 'New journal entry' }}</p>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <p class="section-eyebrow mb-0">{{ editingStatus==='PARKED' ? 'Edit parked draft' : (editingStatus==='POSTED' ? 'Edit entry' : 'New journal entry') }}</p>
+        <button v-if="canPark" class="btn btn-park btn-sm" :disabled="saving" @click="park">⎘ Park (save draft)</button>
+      </div>
       <div class="row g-2 mb-3">
         <div class="col-6 col-md-3"><label class="form-label">Transaction date</label><input v-model="form.date" type="date" class="form-control" /></div>
         <div class="col-12 col-md-9"><label class="form-label">Memo / description (Particulars)</label><input v-model="form.memo" class="form-control" placeholder="e.g. Vending product sale — Amaia Sucat" /></div>
@@ -168,9 +194,9 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
         </span>
         <span class="c-code"><input :value="l.accountCode || ''" class="form-control form-control-sm ro" readonly placeholder="—" /></span>
         <span class="c-type"><input :value="acctType(l)" class="form-control form-control-sm ro" readonly placeholder="—" /></span>
-        <span class="c-cc"><input v-model="l.costCenter" class="form-control form-control-sm" placeholder="CC-007" /></span>
+        <span class="c-cc"><input v-model="l.costCenter" class="form-control form-control-sm" placeholder="CC code" /></span>
         <span class="c-mac">
-          <select v-model="l.machine" class="form-select form-select-sm" @change="onMachine(l)"><option value="">—</option>
+          <select :value="l.machine" class="form-select form-select-sm" @change="onMachine(l, $event.target.value)"><option value="">—</option>
             <option v-for="m in machines" :key="m._id" :value="m._id">{{ m.locationName || m.machineId }}</option></select>
         </span>
         <span class="c-amt"><input v-model.number="l.debit" type="number" class="form-control form-control-sm numeric text-end" /></span>
@@ -184,7 +210,7 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
         <span>Debit: <strong class="numeric">{{ peso(totalDebit) }}</strong></span>
         <span>Credit: <strong class="numeric">{{ peso(totalCredit) }}</strong></span>
         <span class="pill" :class="balanced ? 'ok' : 'warn'">{{ balanced ? 'Balanced' : 'Not balanced' }}</span>
-        <button class="btn btn-primary" :disabled="saving || !balanced" @click="save">{{ saving ? 'Saving…' : (editingId ? 'Save changes' : 'Post entry') }}</button>
+        <button class="btn btn-primary" :disabled="saving || !balanced" @click="save">{{ saving ? 'Saving…' : primaryLabel }}</button>
       </div>
     </div></div>
 
@@ -193,17 +219,26 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
       <div class="d-flex justify-content-between align-items-start mb-2">
         <div><h5 class="mb-0" style="font-family:var(--font-display)">{{ detail.ref }}
           <span v-if="!isManual(detail)" class="pill src ms-1">AUTO · {{ srcLabel(detail) }}</span>
-          <span class="badge7 ms-1" :class="detail.status==='VOID' ? 'off' : 'emp'">{{ detail.status }}</span></h5>
-          <div class="text-muted small">Posted: {{ fmtDateTime(detail.createdAt) }}</div>
+          <span class="badge7 ms-1" :class="detail.status==='VOID' ? 'off' : (detail.status==='PARKED' ? 'parked' : 'emp')">{{ detail.status }}</span></h5>
+          <div class="text-muted small">{{ detail.status==='PARKED' ? 'Saved (draft)' : 'Posted' }}: {{ fmtDateTime(detail.createdAt) }}</div>
           <div class="text-muted small">Transaction date: {{ fmtDate(detail.date) }} · {{ detail.memo }}</div></div>
-        <div class="d-flex gap-2">
-          <button v-if="isOwner && detail.status!=='VOID'" class="btn btn-ink btn-sm" @click="openEdit(detail)">Edit</button>
-          <button v-if="isOwner && detail.status!=='VOID'" class="btn btn-ghost btn-sm" @click="voidEntry(detail)">Void</button>
-          <button v-if="isOwner && detail.status==='VOID'" class="btn btn-ink btn-sm" @click="restoreEntry(detail)">Restore</button>
+        <div class="d-flex gap-2 flex-wrap justify-content-end">
+          <template v-if="detail.status==='PARKED'">
+            <button class="btn btn-ink btn-sm" @click="openEdit(detail)">Edit</button>
+            <button class="btn btn-primary btn-sm" @click="postFromDetail(detail)">Post entry</button>
+            <button class="btn btn-sm btn-danger7" @click="discardDraft(detail)">Discard</button>
+          </template>
+          <template v-else-if="detail.status==='VOID'">
+            <button v-if="isOwner" class="btn btn-ink btn-sm" @click="restoreEntry(detail)">Restore</button>
+          </template>
+          <template v-else>
+            <button v-if="isOwner" class="btn btn-ink btn-sm" @click="openEdit(detail)">Edit</button>
+            <button v-if="isOwner" class="btn btn-ghost btn-sm" @click="voidEntry(detail)">Void</button>
+          </template>
           <button class="btn btn-ghost btn-sm" @click="detail=null">Close</button>
         </div>
       </div>
-      <p v-if="isOwner && !isManual(detail)" class="text-muted small mb-2" style="color:var(--bad)!important">
+      <p v-if="isOwner && detail.status==='POSTED' && !isManual(detail)" class="text-muted small mb-2" style="color:var(--bad)!important">
         ⚠ Auto-posted ito. Ang pag-edit ay maaaring mag-desync sa pinagmulang transaction at maaaring ma-overwrite kapag na-re-post ang source.
       </p>
       <table class="fin-table ruled"><thead><tr><th class="lbl">Date</th><th class="lbl">Account</th><th class="lbl">Type</th><th class="lbl">Cost Ctr</th><th class="lbl">Machine</th><th>Debit</th><th>Credit</th></tr></thead>
@@ -225,10 +260,7 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
     <!-- List + filters -->
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
       <p class="section-eyebrow mb-0">General Journal</p>
-      <div class="d-flex gap-2">
-        <button class="btn btn-ghost btn-sm" @click="downloadCSV">⤓ CSV</button>
-        <button class="btn btn-ghost btn-sm" @click="printJournal">🖨 Print / PDF</button>
-      </div>
+      <button class="btn btn-ghost btn-sm" @click="showExport=true">⤓ Export (PDF / Word / Excel)</button>
     </div>
     <div class="row g-2 my-2">
       <div class="col-6 col-md-3"><label class="form-label mb-0 small text-muted">From</label><input v-model="fStart" type="date" class="form-control form-control-sm" @change="load" /></div>
@@ -252,6 +284,7 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
               <td class="lbl">{{ l.accountCode }}</td>
               <td class="lbl">{{ l.accountName }}</td>
               <td class="lbl"><span class="je-ref">{{ e.ref }}</span>
+                <span v-if="isParked(e) && i===0" class="badge7 parked ms-1">Parked</span>
                 <span v-if="!isManual(e) && i===0" class="pill src ms-1">AUTO</span>
                 <span v-if="e.status==='VOID' && i===0" class="badge7 off ms-1">VOID</span></td>
               <td class="num">{{ l.debit ? peso(l.debit) : '' }}</td>
@@ -265,38 +298,10 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
         </tbody>
       </table>
     </div></div>
-    <p class="text-muted small mt-2">{{ shownEntries.length }} entries · i-click ang isang row para buksan (view · edit · void · restore)</p>
+    <p class="text-muted small mt-2">{{ shownEntries.length }} entries · i-click ang isang row para buksan (view · edit · post · void · restore)</p>
 
-    <!-- Print sheet: GENERAL JOURNAL (output: PDF via browser print) -->
-    <div class="print-sheet">
-      <div class="print-head gj-head">
-        <div class="ph-name">{{ BRAND.name }}</div>
-        <div class="gj-title">GENERAL JOURNAL</div>
-        <div class="ph-sub">Date: {{ rangeLabel() }}<span v-if="fSource"> · {{ fSource === 'MANUAL' ? 'Manual' : (SRC[fSource] || fSource) }}</span></div>
-      </div>
-      <table class="fin-table ruled gj-table">
-        <thead><tr>
-          <th class="lbl">DATE</th><th class="lbl">ACCOUNT CODE</th><th class="lbl">ACCOUNTS</th><th class="lbl">JE</th>
-          <th>DEBIT AMOUNT</th><th>CREDIT AMOUNT</th><th class="lbl">DESCRIPTION</th><th class="lbl">ACCOUNT TYPE</th><th class="lbl">PARTICULARS</th>
-        </tr></thead>
-        <tbody>
-          <template v-for="e in journalRows" :key="e._id">
-            <tr v-for="(l,i) in e.lines" :key="e._id+'-'+i">
-              <td class="lbl">{{ isoDatePH(e.date) }}</td>
-              <td class="lbl">{{ l.accountCode }}</td>
-              <td class="lbl">{{ l.accountName }}</td>
-              <td class="lbl">{{ e.ref }}</td>
-              <td class="num">{{ l.debit ? peso(l.debit) : '' }}</td>
-              <td class="num">{{ l.credit ? peso(l.credit) : '' }}</td>
-              <td class="lbl">{{ l.description }}</td>
-              <td class="lbl">{{ l.accountType }}</td>
-              <td class="lbl">{{ e.memo }}</td>
-            </tr>
-            <tr class="gj-spacer"><td colspan="9"></td></tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
+    <ExportDialog :visible="showExport" :busy="exporting" title="Export General Journal"
+      @confirm="onExport" @close="showExport=false" />
   </div>
 </template>
 
@@ -309,13 +314,9 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
 .pill { font-size:.75rem; font-weight:700; padding:.2rem .6rem; border-radius:999px; background:#EAF0F8; color:var(--ink-2); }
 .pill.ok { background:#E5F6EC; color:var(--good); } .pill.warn { background:#FDECEC; color:var(--bad); }
 .pill.src { background:#EEF2FF; color:#4338CA; font-size:.68rem; padding:.12rem .5rem; vertical-align:middle; }
+.btn-park { background:#1F9D55; color:#fff; border:none; }
+.btn-park:hover { background:#188046; color:#fff; }
 @media (max-width: 991px){ .je-row{ flex-wrap:wrap; } .c-acct,.c-code,.c-type,.c-cc,.c-mac,.c-amt,.c-desc{ flex:1 1 46%; } }
-
-/* General Journal print look */
-.gj-head { text-align:center; margin-bottom:10px; }
-.gj-title { font-family:var(--font-display); font-weight:800; font-size:1.25rem; letter-spacing:.04em; }
-.gj-table th { background:#EEF2F7; }
-.gj-spacer td { border:none !important; height:6px; }
 
 /* General Journal on-screen table */
 .gj-screen thead th { background:#EEF2F7; }

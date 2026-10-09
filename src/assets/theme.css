@@ -89,6 +89,7 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-display); letter-spacing:-.015em; }
 .badge7.owner  { background: var(--ink); color:#fff; }
 .badge7.emp    { background:#EAF0F8; color:var(--ink-2); }
 .badge7.off    { background:#FCE8E8; color:var(--bad); }
+.badge7.parked { background:#E3F6EA; color:#1F9D55; }
 
 /* focus-visible everywhere (quality floor) */
 :focus-visible { outline: 2px solid var(--dawn); outline-offset:2px; }
