@@ -138,7 +138,7 @@ onMounted(load);
     <div v-if="showForm" class="card mb-4"><div class="card-body">
       <p class="section-eyebrow mb-3">{{ form.id ? 'Edit asset' : 'New asset' }}</p>
       <div class="row g-2">
-        <div class="col-6 col-md-3"><label class="form-label">Asset ID</label><input v-model="form.deviceId" class="form-control" placeholder="autofill from Machine" /></div>
+        <div class="col-6 col-md-3"><label class="form-label">Device ID</label><input v-model="form.deviceId" class="form-control" placeholder="autofill from Machine" /></div>
         <div class="col-6 col-md-3"><label class="form-label">Installation date</label><input v-model="form.installationDate" type="date" class="form-control" /></div>
         <div class="col-6 col-md-3"><label class="form-label">Category</label>
           <select v-model="form.category" class="form-select"><option v-for="c in categories" :key="c" :value="c">{{ c }}</option></select></div>
@@ -167,7 +167,7 @@ onMounted(load);
         <div v-else-if="schedule" class="card"><div class="card-body p-0" style="overflow-x:auto">
           <table class="fin-table ruled" style="min-width:1500px">
             <thead><tr>
-              <th class="lbl">Asset ID</th><th class="lbl">Machine</th><th class="lbl">Location</th><th class="lbl">Installation</th>
+              <th class="lbl">Device ID</th><th class="lbl">Machine</th><th class="lbl">Location</th><th class="lbl">Installation</th>
               <th>Cost</th><th>Salvage %</th><th>Salvage</th><th>Life</th><th>Depreciable</th><th>Daily Dep.</th>
               <th class="lbl">Month</th><th>Days</th><th>Monthly Dep.</th><th>Accum. Dep.</th><th>Book Value</th>
               <th class="lbl" style="text-align:center">Action</th>
@@ -219,7 +219,7 @@ onMounted(load);
     <div v-if="loading" class="text-muted">Loading…</div>
     <div v-else class="card"><div class="card-body p-0" style="overflow-x:auto">
       <table class="fin-table" style="min-width:900px">
-        <thead><tr><th class="lbl">Tag</th><th class="lbl">Asset ID</th><th class="lbl">Category</th><th class="lbl">Installation</th><th>Cost</th><th>Accum. Dep.</th><th>Book Value</th><th class="lbl">Status</th><th></th></tr></thead>
+        <thead><tr><th class="lbl">Tag</th><th class="lbl">Device ID</th><th class="lbl">Category</th><th class="lbl">Installation</th><th>Cost</th><th>Accum. Dep.</th><th>Book Value</th><th class="lbl">Status</th><th></th></tr></thead>
         <tbody>
           <tr v-for="a in assets" :key="a._id">
             <td class="lbl">{{ a.assetTag }}</td>
