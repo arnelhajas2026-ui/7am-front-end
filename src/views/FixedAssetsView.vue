@@ -53,10 +53,11 @@ function edit(a) {
     machine: a.machine?._id || a.machine || '', openingAccumulated: a.openingAccumulated };
   showForm.value = true; loadSchedule(a._id); window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-// Machine → autofill Device ID (editable pa rin)
+// Machine → autofill Device ID + Cost Center (editable pa rin)
 function onMachine() {
   const m = machineById.value[form.value.machine];
   if (m && m.deviceId) form.value.deviceId = m.deviceId;
+  if (m && m.costCenter) form.value.costCenter = m.costCenter;
 }
 async function save() {
   saving.value = true; error.value = ''; notice.value = '';
