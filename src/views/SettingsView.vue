@@ -20,10 +20,12 @@ const clearResult = ref(null);
 
 async function clearTestData(){
   if (clearConfirm.value !== 'CLEAR') { error.value = 'I-type ang CLEAR para kumpirmahin.'; return; }
-  const label = clearScope.value === 'all'
-    ? 'transactions AT master data (products, machines, customers, suppliers)'
-    : 'lahat ng test transactions';
-  if (!confirm(`Clear ${label}? Hindi na ito maibabalik. Ang Users at Settings ay mananatili.`)) return;
+  const label = clearScope.value === 'everything'
+    ? 'LAHAT — transactions, master data, AT accounting (GL, Journal Entries, Opening Balances, Fixed Assets). Ire-reset ang period lock'
+    : clearScope.value === 'all'
+      ? 'transactions AT master data (products, machines, customers, suppliers)'
+      : 'lahat ng test transactions';
+  if (!confirm(`Clear ${label}? Hindi na ito maibabalik. Ang Users, Settings, Chart of Accounts at Cost Centers ay mananatili.`)) return;
   clearing.value = true; error.value=''; clearResult.value=null;
   try {
     const { data } = await api.post('/admin/clear-test-data', { scope: clearScope.value, confirm: 'CLEAR' });
@@ -104,7 +106,11 @@ onMounted(load);
             <select v-model="clearScope" class="form-select">
               <option value="transactions">Transactions lang (panatilihin ang products, machines, customers, suppliers)</option>
               <option value="all">Lahat — transactions + master data</option>
+              <option value="everything">Everything incl. accounting — + GL, Journal Entries, Opening Balances, Fixed Assets (fully fresh)</option>
             </select>
+            <p v-if="clearScope==='everything'" class="text-muted small mt-1 mb-0">
+              ⚠ Buburahin din ang buong General Ledger, lahat ng Journal Entries, Opening Balances, at Fixed Assets, at ire-reset ang period lock. Mananatili ang Chart of Accounts + Cost Centers (seeded), Users, at Settings.
+            </p>
           </div>
           <div class="col-8 col-md-4"><label class="form-label">I-type ang CLEAR</label><input v-model="clearConfirm" class="form-control" placeholder="CLEAR" /></div>
           <div class="col-4 col-md-2"><button class="btn btn-danger7 w-100" :disabled="clearing || clearConfirm!=='CLEAR'" @click="clearTestData">{{ clearing ? 'Clearing…' : 'Clear' }}</button></div>
