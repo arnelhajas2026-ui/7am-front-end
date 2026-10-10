@@ -8,6 +8,8 @@ export const NAV = [
   { name: 'transfers', label: 'Transfers', icon: 'transfer', module: 'inventory',  group: 'Operations' },
   { name: 'reconciliation', label: 'Reconcile', icon: 'scale', module: 'reconciliation', group: 'Operations' },
   { name: 'expenses',  label: 'Expenses',  icon: 'wallet',  module: 'expenses',   group: 'Operations' },
+  { name: 'quotationsops',  label: 'Quotations',  icon: 'quote', module: 'sales', group: 'Operations' },
+  { name: 'salesordersops', label: 'Sales Orders', icon: 'order', module: 'sales', group: 'Operations' },
   { name: 'customerledgerops', label: 'Customer Ledger', icon: 'ledger', module: 'sales', group: 'Operations' },
   // --- Insights group (derived management reports) — HIDDEN for client clarity.
   //     Para ibalik: alisin lang ang comment sa dalawang linya sa baba.

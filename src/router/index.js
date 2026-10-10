@@ -74,6 +74,8 @@ const routes = [
   { path: '/payment-compare', name: 'paymentcompare', component: PaymentComparisonView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/customer-ledger', name: 'customerledger', component: CustomerLedgerView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/customer-ledger-ops', name: 'customerledgerops', component: CustomerLedgerView, meta: { requiresAuth: true, module: 'sales' } },
+  { path: '/quotations-ops', name: 'quotationsops', component: QuotationsView, meta: { requiresAuth: true, module: 'sales' } },
+  { path: '/sales-orders-ops', name: 'salesordersops', component: SalesOrdersView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/approvals', name: 'approvals', component: ApprovalsView, meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/accounts',  name: 'accounts',  component: AccountsView,  meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/audit',     name: 'audittrail', component: AuditTrailView, meta: { requiresAuth: true, ownerOnly: true } },

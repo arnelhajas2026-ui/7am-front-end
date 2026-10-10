@@ -24,11 +24,12 @@ const showDoc = ref(false);
 const docData = ref(null);
 function printInvoice(){
   const o = selected.value;
+  const items = (o.kind === 'PRODUCT' && o.items?.length)
+    ? o.items.map((it) => ({ description: it.description || it.product?.name || 'Item', qty: it.quantity, unitPrice: it.unitPrice, amount: it.lineTotal }))
+    : [{ description: o.machineModel || 'Vending machine', qty: o.quantity, unitPrice: o.quantity ? o.totalAmount / o.quantity : o.totalAmount, amount: o.totalAmount }];
   docData.value = {
     title: 'SALES INVOICE', docNo: o.invoiceNumber || o.orderNumber, date: fmtDate(Date.now()),
-    customerName: o.customer?.name || '',
-    items: [{ description: o.machineModel || 'Vending machine', qty: o.quantity,
-              unitPrice: o.quantity ? o.totalAmount / o.quantity : o.totalAmount, amount: o.totalAmount }],
+    customerName: o.customer?.name || '', items,
     totalSales: o.totalAmount, discount: 0, withholding: 0, totalDue: o.totalAmount,
   };
   showDoc.value = true;
@@ -96,8 +97,12 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
     <div v-if="selected" class="card mb-4"><div class="card-body">
       <div class="d-flex justify-content-between align-items-start mb-3">
         <div>
-          <h5 class="mb-0" style="font-family:var(--font-display)">{{ selected.orderNumber }}</h5>
-          <div class="text-muted small">{{ selected.customer?.name }} · {{ selected.machineModel }} · {{ selected.quantity }} unit/s</div>
+          <h5 class="mb-0" style="font-family:var(--font-display)">{{ selected.orderNumber }}
+            <span class="badge7 ms-1" :class="selected.kind==='PRODUCT' ? 'emp' : 'owner'">{{ selected.kind==='PRODUCT' ? 'PRODUCT' : 'MACHINE' }}</span></h5>
+          <div class="text-muted small">{{ selected.customer?.name }} ·
+            <template v-if="selected.kind==='PRODUCT'">Product order · {{ selected.items?.length || 0 }} item/s</template>
+            <template v-else>{{ selected.machineModel }} · {{ selected.quantity }} unit/s</template>
+          </div>
         </div>
         <div class="d-flex gap-2"><button class="btn btn-ghost btn-sm" @click="printInvoice">Print invoice</button>
         <button class="btn btn-ghost btn-sm" @click="close">Close</button></div>
@@ -111,6 +116,21 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
 
       <div class="mb-3"><span class="pill" :class="statusClass(selected.status)">{{ selected.status }}</span>
         <span v-if="selected.invoiceNumber" class="pill ok ms-1">{{ selected.invoiceNumber }}</span></div>
+
+      <!-- Product line items -->
+      <div v-if="selected.kind==='PRODUCT' && selected.items?.length" class="card mb-3"><div class="card-body p-0" style="overflow-x:auto">
+        <table class="fin-table ruled" style="min-width:520px">
+          <thead><tr><th class="lbl">Product</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr></thead>
+          <tbody>
+            <tr v-for="(it,i) in selected.items" :key="i">
+              <td class="lbl">{{ it.description || it.product?.name || 'Item' }}</td>
+              <td class="num">{{ it.quantity }}</td>
+              <td class="num">{{ peso(it.unitPrice) }}</td>
+              <td class="num fw-semibold">{{ peso(it.lineTotal) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div></div>
 
       <!-- Customer payment -->
       <template v-if="selected.balance>0">
@@ -132,7 +152,8 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
       <div v-if="!payments.length" class="text-muted small">No payments yet.</div>
       <div v-for="p in payments" :key="p._id" class="is-row"><span>{{ dt(p.date) }} · {{ p.type }} <span class="text-muted small">{{ p.reference }}</span></span><span class="numeric">{{ peso(p.amount) }}</span></div>
 
-      <!-- ===== Supplier payments ===== -->
+      <!-- ===== Supplier payments (machine procurement lang) ===== -->
+      <template v-if="selected.kind!=='PRODUCT'">
       <hr class="my-3" />
       <p class="section-eyebrow mb-2">Supplier (machine procurement)</p>
       <div class="row g-2 mb-3">
@@ -158,6 +179,7 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
         <span>{{ dt(p.date) }} · {{ p.method || '—' }} <span class="text-muted small">{{ p.supplier?.name }} {{ p.reference }}</span></span>
         <span class="numeric">{{ peso(p.phpAmount) }}<span v-if="p.currency!=='PHP'" class="text-muted small"> ({{ p.amount }} {{ p.currency }})</span></span>
       </div>
+      </template>
     </div></div>
 
     <div v-if="loading" class="text-muted">Loading…</div>
@@ -165,8 +187,9 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
     <div v-for="o in orders" :key="o._id" class="card mb-2" style="cursor:pointer" @click="open(o)"><div class="card-body py-2 d-flex align-items-center gap-3">
       <div class="flex-grow-1">
         <div class="fw-semibold" style="font-family:var(--font-display)">{{ o.orderNumber }}
+          <span class="badge7 ms-1" :class="o.kind==='PRODUCT' ? 'emp' : 'owner'">{{ o.kind==='PRODUCT' ? 'PRODUCT' : 'MACHINE' }}</span>
           <span class="text-muted small ms-1">{{ o.customer?.name }}</span></div>
-        <div class="text-muted small">{{ o.machineModel }} · Balance {{ peso(o.balance) }}</div>
+        <div class="text-muted small">{{ o.kind==='PRODUCT' ? 'Product order' : o.machineModel }} · Balance {{ peso(o.balance) }}</div>
       </div>
       <span class="pill" :class="statusClass(o.status)">{{ o.status }}</span>
     </div></div>
