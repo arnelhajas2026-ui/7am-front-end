@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth.js';
+import api from '../services/api.js';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -11,6 +12,36 @@ const password = ref('');
 const showPw = ref(false);
 const error = ref('');
 const loading = ref(false);
+
+// --- Gate: ipakita lang ang login card kapag (1) naka-connect na sa server
+//     AT (2) lumipas na ang 4 seconds. Hanggang doon, background + "connecting…".
+const connected = ref(false);
+const minElapsed = ref(false);
+const ready = computed(() => connected.value && minElapsed.value);
+
+let pingTimer = null;
+let minTimer = null;
+let cancelled = false;
+
+async function ping() {
+  if (cancelled) return;
+  try {
+    await api.get('/health');
+    connected.value = true;
+  } catch {
+    pingTimer = setTimeout(ping, 800); // retry hanggang gumising ang server (Render cold start)
+  }
+}
+
+onMounted(() => {
+  minTimer = setTimeout(() => { minElapsed.value = true; }, 4000);
+  ping();
+});
+onUnmounted(() => {
+  cancelled = true;
+  clearTimeout(pingTimer);
+  clearTimeout(minTimer);
+});
 
 async function submit() {
   error.value = '';
@@ -27,21 +58,24 @@ async function submit() {
 </script>
 
 <template>
-  <div class="login-wrap">
-    <!-- Brand / first-light panel (desktop) -->
-    <div class="login-brand">
-      <img src="/logo.png" class="login-logo" alt="7A'M" onerror="this.style.display='none'" />
-      <div class="mark"><span class="brand-dot"></span> 7A'M</div>
-      <h1 class="headline">Run the day from first light.</h1>
-      <p class="tag">Every sale, every machine, every peso of stock and cash — in one place.</p>
-    </div>
+  <!-- Background (laging nakikita; 916.jpg portrait, 169.jpg landscape — walang gradient) -->
+  <div class="login-bg"></div>
 
-    <!-- Form -->
-    <div class="login-form">
-      <div class="inner">
-        <img src="/logo.png" class="login-logo-sm d-lg-none" alt="7A'M" onerror="this.style.display='none'" />
-        <p class="section-eyebrow mb-1">Welcome back</p>
-        <h3 class="mb-4">Sign in</h3>
+  <!-- Connecting state: background + mensahe lang hangga't hindi pa ready -->
+  <transition name="fade">
+    <div v-if="!ready" class="login-status">
+      <img src="/logo.png" class="status-logo" alt="7A'M" onerror="this.style.display='none'" />
+      <p class="status-msg">connecting to server<span class="dots"><span>.</span><span>.</span><span>.</span></span></p>
+    </div>
+  </transition>
+
+  <!-- Glass login card: lalabas lang kapag ready -->
+  <transition name="card-fade">
+    <div v-if="ready" class="glass-login">
+      <div class="glass-card">
+        <img src="/logo.png" class="glass-logo" alt="7A'M" onerror="this.style.display='none'" />
+        <p class="section-eyebrow glass-eyebrow mb-1">Welcome back</p>
+        <h3 class="glass-title mb-4">Sign in</h3>
 
         <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
 
@@ -64,8 +98,8 @@ async function submit() {
           {{ loading ? 'Signing in…' : 'Sign in' }}
         </button>
 
-        <p class="login-credit">© 2026 Designed by: RDT Systems</p>
+        <p class="login-credit glass-credit">© 2026 Designed by: RDT Systems</p>
       </div>
     </div>
-  </div>
+  </transition>
 </template>
