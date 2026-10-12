@@ -6,6 +6,7 @@ import { fmtDate } from '../utils/datetime.js';
 const transfers = ref([]);
 const machines = ref([]);
 const products = ref([]);
+const riders = ref([]);
 const loading = ref(false);
 const error = ref('');
 const showForm = ref(false);
@@ -13,7 +14,7 @@ const saving = ref(false);
 
 const today = () => new Date().toISOString().slice(0,10);
 const newLine = () => ({ product:'', source:'WAREHOUSE:', dest:'', quantity:1 });
-const form = ref({ date: today(), lines: [newLine()] });
+const form = ref({ date: today(), assignedRider:'', lines: [newLine()] });
 
 // Location dropdown options (Warehouse + bawat machine display at side cabinet).
 const locOptions = computed(() => {
@@ -39,12 +40,29 @@ function onLineProduct(l){ fetchBalances(l.product); }
 
 function addLine(){ form.value.lines.push(newLine()); }
 function removeLine(i){ form.value.lines.splice(i,1); if(!form.value.lines.length) addLine(); }
-function reset(){ form.value = { date: today(), lines:[newLine()] }; showForm.value=false; }
+function reset(){ form.value = { date: today(), assignedRider:'', lines:[newLine()] }; showForm.value=false; }
 function openForm(){ showForm.value=true; }
 
 const selected = ref(null);
 function viewTransfer(t){ selected.value=t; window.scrollTo({ top:0, behavior:'smooth' }); }
 function closeView(){ selected.value=null; }
+
+// --- Bulk import ---
+const showImport = ref(false);
+const importing = ref(false);
+const importFile = ref(null);
+const importResult = ref(null);
+function onImportPick(e){ importFile.value = e.target.files?.[0] || null; importResult.value = null; }
+async function runImport(){
+  if (!importFile.value){ error.value='Pumili muna ng .xlsx o .csv file.'; return; }
+  importing.value=true; error.value=''; importResult.value=null;
+  try {
+    const fd = new FormData(); fd.append('file', importFile.value);
+    const { data } = await api.post('/transfers/import', fd, { headers:{ 'Content-Type':'multipart/form-data' } });
+    importResult.value = data; importFile.value=null; await load();
+  } catch(e){ error.value = e.response?.data?.message || 'Could not import.'; }
+  finally { importing.value=false; }
+}
 
 const STATUS = {
   POSTED:{ label:'Posted', cls:'ok' }, PARKED:{ label:'Parked', cls:'park' },
@@ -63,8 +81,8 @@ function lineRoute(l){
 async function load(){
   loading.value=true; error.value='';
   try {
-    const [tr,ma,pr] = await Promise.all([ api.get('/transfers'), api.get('/machines'), api.get('/products') ]);
-    transfers.value = tr.data.transfers; machines.value = ma.data.machines; products.value = pr.data.products;
+    const [tr,ma,pr,rd] = await Promise.all([ api.get('/transfers'), api.get('/machines'), api.get('/products'), api.get('/riders') ]);
+    transfers.value = tr.data.transfers; machines.value = ma.data.machines; products.value = pr.data.products; riders.value = rd.data.riders;
   } catch(e){ error.value = e.response?.data?.message || 'Could not load transfers.'; }
   finally { loading.value=false; }
 }
@@ -76,7 +94,7 @@ function payload(saveDraft){
       const [st,sm] = l.source.split(':'); const [dt,dm] = l.dest.split(':');
       return { product:l.product, sourceType:st, sourceMachine: sm||null, destType:dt, destMachine: dm||null, quantity:Number(l.quantity) };
     });
-  return { date: form.value.date, lines, saveDraft };
+  return { date: form.value.date, assignedRider: form.value.assignedRider || null, lines, saveDraft };
 }
 async function submit(saveDraft){
   saving.value=true; error.value='';
@@ -102,10 +120,32 @@ onMounted(load);
   <div>
     <div class="d-flex align-items-center justify-content-between mb-1">
       <h3 class="mb-0">Transfers</h3>
-      <button class="btn btn-primary btn-sm" @click="showForm ? reset() : openForm()">{{ showForm ? 'Close' : '+ New transfer' }}</button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-ghost btn-sm" @click="showImport = !showImport">{{ showImport ? 'Hide import' : 'Import' }}</button>
+        <button class="btn btn-primary btn-sm" @click="showForm ? reset() : openForm()">{{ showForm ? 'Close' : '+ New transfer' }}</button>
+      </div>
     </div>
     <p class="text-muted">Move stock between any locations — warehouse, machine display, or side cabinet. Blocked if the source is short.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
+
+    <!-- Bulk import (xlsx/csv) -->
+    <div v-if="showImport" class="card mb-4"><div class="card-body">
+      <p class="section-eyebrow mb-2">Import transfers (.xlsx / .csv)</p>
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <input type="file" accept=".xlsx,.xls,.csv" class="form-control form-control-sm" style="max-width:320px" @change="onImportPick" />
+        <button class="btn btn-primary btn-sm" :disabled="importing" @click="runImport">{{ importing ? 'Importing…' : 'Import' }}</button>
+      </div>
+      <div class="text-muted small mt-2">
+        Columns: <strong>Transfer No, Date, SKU</strong> (o Product), <strong>Source Type</strong> (Warehouse/Machine/Side Cabinet), <strong>Source Machine, Destination Type, Destination Machine, Qty, Assigned Rider</strong>.
+        Ang mga row na may parehong <strong>Transfer No</strong> ay pinagsasama. Ang na-import ay <strong>Completed</strong> agad (historical) — gumagalaw ang stock.
+      </div>
+      <div v-if="importResult" class="alert alert-success py-2 mt-2 mb-0">
+        Na-import: <strong>{{ importResult.created }}</strong> transfer(s), {{ importResult.lines }} line(s). Skipped: {{ importResult.skipped }}.
+        <div v-if="importResult.errors?.length" class="small mt-1" style="color:var(--bad)">
+          <div v-for="(er,i) in importResult.errors" :key="i">· {{ er }}</div>
+        </div>
+      </div>
+    </div></div>
 
     <!-- Detail view -->
     <div v-if="selected" class="card mb-4"><div class="card-body">
@@ -114,7 +154,8 @@ onMounted(load);
           <h5 class="mb-0" style="font-family:var(--font-display)">{{ selected.transferNo || 'Transfer' }}
             <span class="pill ms-1" :class="statusOf(selected.status).cls">{{ statusOf(selected.status).label }}</span></h5>
           <div class="text-muted small">{{ fmtDate(selected.date) }} ·
-            Prepared by: {{ selected.preparedBy?.name || '—' }}</div>
+            Prepared by: {{ selected.preparedBy?.name || '—' }} ·
+            Assigned to: {{ selected.assignedRider?.name || '—' }}</div>
         </div>
         <div class="d-flex gap-2">
           <button v-if="selected.status==='PARKED'" class="btn btn-primary btn-sm" @click="submitDraft(selected)">Submit</button>
@@ -144,7 +185,13 @@ onMounted(load);
     <div v-if="showForm" class="card mb-4"><div class="card-body">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <p class="section-eyebrow mb-0">New transfer <span class="text-muted small">· Transfer No. auto on save (TRF-YYYY-#####)</span></p>
-        <div style="max-width:170px"><input v-model="form.date" type="date" class="form-control form-control-sm" /></div>
+        <div class="d-flex gap-2">
+          <select v-model="form.assignedRider" class="form-select form-select-sm" style="max-width:190px">
+            <option value="">Assign to rider…</option>
+            <option v-for="r in riders" :key="r._id" :value="r._id">{{ r.name }}</option>
+          </select>
+          <input v-model="form.date" type="date" class="form-control form-control-sm" style="max-width:160px" />
+        </div>
       </div>
 
       <div class="table-responsive">

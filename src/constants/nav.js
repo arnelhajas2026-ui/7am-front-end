@@ -37,10 +37,14 @@ export const NAV = [
   { name: 'paymentcompare', label: 'Payment Compare', icon: 'exchange', module: 'sales', group: 'Machine Sales' },
   { name: 'customerledger', label: 'Customer Ledger', icon: 'ledger', module: 'sales', group: 'Machine Sales' },
 
+  // Rider section — nakikita ng RIDER (sariling deliveries) at ng Owner (lahat).
+  { name: 'riderdeliveries', label: 'Transfers / Deliveries', icon: 'truck', riderOnly: true, group: 'Rider' },
+
   { name: 'products',  label: 'Products',  icon: 'box',    module: 'inventory',  group: 'Master Data' },
   { name: 'machines',  label: 'Machines',  icon: 'server', module: 'machineOps', group: 'Master Data' },
   { name: 'customers', label: 'Customers', icon: 'user',   module: 'sales',      group: 'Master Data' },
   { name: 'suppliers', label: 'Suppliers', icon: 'truck',  module: 'purchases',  group: 'Master Data' },
+  { name: 'riders',    label: 'Riders',    icon: 'user',   ownerOnly: true,      group: 'Master Data' },
 
   { name: 'approvals', label: 'Approvals', icon: 'check',  ownerOnly: true,      group: 'Admin' },
   { name: 'accounts',  label: 'Accounts',  icon: 'users',  ownerOnly: true,      group: 'Admin' },

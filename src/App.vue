@@ -16,8 +16,11 @@ function logout() { auth.logout(); router.push({ name: 'login' }); }
 function exitImpersonation() { auth.exitImpersonation(); router.push({ name: 'accounts' }); }
 
 // Filter ng nav base sa access (UX lang ito — backend pa rin ang tunay na bantay).
+const isRider = computed(() => auth.user?.role === 'RIDER');
 const visibleNav = computed(() =>
   NAV.filter((it) => {
+    if (isRider.value) return !!it.riderOnly;            // riders: Rider section lang
+    if (it.riderOnly) return auth.isOwner || auth.isSuperadmin; // owner nakakakita rin ng Rider section
     if (it.ownerOnly) return auth.isOwner || auth.isSuperadmin;
     if (!it.module) return true;
     return auth.isOwner || auth.isSuperadmin || (auth.user?.permissions?.[it.module] &&

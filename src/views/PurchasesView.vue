@@ -13,6 +13,23 @@ const saving = ref(false);
 
 const form = ref({ supplier:'', reference:'', date:new Date().toISOString().slice(0,10), paymentMethod:'CREDIT', items:[] });
 
+// --- Bulk import ---
+const showImport = ref(false);
+const importing = ref(false);
+const importFile = ref(null);
+const importResult = ref(null);
+function onImportPick(e){ importFile.value = e.target.files?.[0] || null; importResult.value = null; }
+async function runImport(){
+  if (!importFile.value) { error.value = 'Pumili muna ng .xlsx o .csv file.'; return; }
+  importing.value = true; error.value=''; importResult.value=null;
+  try {
+    const fd = new FormData(); fd.append('file', importFile.value);
+    const { data } = await api.post('/purchases/import', fd, { headers:{ 'Content-Type':'multipart/form-data' } });
+    importResult.value = data; importFile.value = null; await load();
+  } catch(e){ error.value = e.response?.data?.message || 'Could not import.'; }
+  finally { importing.value=false; }
+}
+
 function addItem(){ form.value.items.push({ product:'', quantity:1, unitCost:0 }); }
 function removeItem(i){ form.value.items.splice(i,1); }
 function reset(){ form.value = { supplier:'', reference:'', date:new Date().toISOString().slice(0,10), paymentMethod:'CREDIT', items:[] }; showForm.value=false; }
@@ -62,10 +79,32 @@ onMounted(load);
   <div>
     <div class="d-flex align-items-center justify-content-between mb-1">
       <h3 class="mb-0">Purchases</h3>
-      <button class="btn btn-primary btn-sm" @click="showForm ? reset() : openForm()">{{ showForm ? 'Close' : '+ Record purchase' }}</button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-ghost btn-sm" @click="showImport = !showImport">{{ showImport ? 'Hide import' : 'Import' }}</button>
+        <button class="btn btn-primary btn-sm" @click="showForm ? reset() : openForm()">{{ showForm ? 'Close' : '+ Record purchase' }}</button>
+      </div>
     </div>
     <p class="text-muted">Credit purchases become Accounts Payable; settle them to reduce cash.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
+
+    <!-- Bulk import (xlsx/csv) -->
+    <div v-if="showImport" class="card mb-4"><div class="card-body">
+      <p class="section-eyebrow mb-2">Import purchases (.xlsx / .csv)</p>
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <input type="file" accept=".xlsx,.xls,.csv" class="form-control form-control-sm" style="max-width:320px" @change="onImportPick" />
+        <button class="btn btn-primary btn-sm" :disabled="importing" @click="runImport">{{ importing ? 'Importing…' : 'Import Purchase' }}</button>
+      </div>
+      <div class="text-muted small mt-2">
+        Columns: <strong>Reference, Date, Supplier, SKU</strong> (o Product name), <strong>Qty, Unit Cost, Payment</strong> (CREDIT/CASH/BANK).
+        Ang mga row na may parehong <strong>Reference</strong> ay pinagsasama sa iisang purchase. Pang-migrate ng Jan-to-present.
+      </div>
+      <div v-if="importResult" class="alert alert-success py-2 mt-2 mb-0">
+        Na-import: <strong>{{ importResult.created }}</strong> purchase(s), {{ importResult.lines }} line(s). Skipped: {{ importResult.skipped }}.
+        <div v-if="importResult.errors?.length" class="small mt-1" style="color:var(--bad)">
+          <div v-for="(er,i) in importResult.errors" :key="i">· {{ er }}</div>
+        </div>
+      </div>
+    </div></div>
 
     <!-- Detail -->
     <div v-if="selected" class="card mb-4"><div class="card-body">

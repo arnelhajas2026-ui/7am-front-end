@@ -164,6 +164,9 @@ onMounted(load);
       <!-- Depreciation schedule (pag-edit) -->
       <div v-if="form.id" class="mt-4">
         <p class="section-eyebrow mb-2">Depreciation schedule</p>
+        <div v-if="schedule && schedule.asset.status === 'DISPOSED'" class="alert alert-warning py-2 small mb-2">
+          Disposed na ang asset na ito{{ schedule.asset.disposalDate ? ' (' + fmtDate(schedule.asset.disposalDate) + ')' : '' }} — naka-disable na ang Run depreciation para hindi na makapag-post pa ng JE.
+        </div>
         <div v-if="scheduleLoading" class="text-muted small">Loading schedule…</div>
         <div v-else-if="schedule" class="card"><div class="card-body p-0" style="overflow-x:auto">
           <table class="fin-table ruled" style="min-width:1500px">
@@ -192,7 +195,9 @@ onMounted(load);
                 <td class="num fw-semibold">{{ peso(r.bookValue) }}</td>
                 <td class="lbl" style="text-align:center">
                   <span v-if="r.posted" class="badge7 emp">Posted</span>
-                  <button v-else-if="isOwner" class="btn btn-ghost btn-sm py-0" @click="runThrough(r.monthEnd)">Run depreciation</button>
+                  <span v-else-if="schedule.asset.status === 'DISPOSED'" class="text-muted small">Disposed</span>
+                  <span v-else-if="schedule.asset.status === 'FULLY_DEPRECIATED'" class="text-muted small">Fully depreciated</span>
+                  <button v-else-if="isOwner && r.runnable" class="btn btn-ghost btn-sm py-0" @click="runThrough(r.monthEnd)">Run depreciation</button>
                   <span v-else class="text-muted small">—</span>
                 </td>
               </tr>

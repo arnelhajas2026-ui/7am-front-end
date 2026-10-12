@@ -38,6 +38,8 @@ import PaymentComparisonView from '../views/PaymentComparisonView.vue';
 import CustomerLedgerView from '../views/CustomerLedgerView.vue';
 import PurchasesView from '../views/PurchasesView.vue';
 import TransfersView from '../views/TransfersView.vue';
+import RiderDeliveriesView from '../views/RiderDeliveriesView.vue';
+import RidersView from '../views/RidersView.vue';
 
 const routes = [
   { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
@@ -76,6 +78,8 @@ const routes = [
   { path: '/customer-ledger-ops', name: 'customerledgerops', component: CustomerLedgerView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/quotations-ops', name: 'quotationsops', component: QuotationsView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/sales-orders-ops', name: 'salesordersops', component: SalesOrdersView, meta: { requiresAuth: true, module: 'sales' } },
+  { path: '/rider-deliveries', name: 'riderdeliveries', component: RiderDeliveriesView, meta: { requiresAuth: true, riderAllowed: true } },
+  { path: '/riders', name: 'riders', component: RidersView, meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/approvals', name: 'approvals', component: ApprovalsView, meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/accounts',  name: 'accounts',  component: AccountsView,  meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/audit',     name: 'audittrail', component: AuditTrailView, meta: { requiresAuth: true, ownerOnly: true } },
@@ -93,7 +97,16 @@ function canAccessModule(auth, module) {
 
 router.beforeEach((to) => {
   const auth = useAuthStore();
+  const isRider = auth.user?.role === 'RIDER';
   if (to.meta.requiresAuth && !auth.isLoggedIn) return { name: 'login' };
+
+  // RIDER: naka-kulong sa Rider section lang.
+  if (isRider) {
+    if (to.name === 'login') return auth.isLoggedIn ? { name: 'riderdeliveries' } : true;
+    if (!to.meta.riderAllowed) return { name: 'riderdeliveries' };
+    return true;
+  }
+
   if (to.meta.ownerOnly && !(auth.isOwner || auth.isSuperadmin)) return { name: 'dashboard' };
   if (to.meta.module && !canAccessModule(auth, to.meta.module)) return { name: 'dashboard' };
   if (to.name === 'login' && auth.isLoggedIn) return { name: 'dashboard' };

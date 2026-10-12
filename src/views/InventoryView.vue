@@ -19,6 +19,8 @@ const tfSaving = ref(false);
 const tfError = ref('');
 const tfBal = ref({});          // locValue -> qty (para sa naka-fix na product)
 const tfLines = ref([]);
+const tfRider = ref('');
+const riders = ref([]);
 const locOptions = computed(() => {
   const opts = [{ value:'WAREHOUSE:', label:'Warehouse' }];
   for (const m of machines.value) opts.push({ value:`MACHINE_LOADED:${m._id}`, label:(m.locationName||m.machineId) });
@@ -27,10 +29,11 @@ const locOptions = computed(() => {
 });
 const tfNewLine = () => ({ source:'WAREHOUSE:', dest:'', quantity:1 });
 async function openTransfer(){
-  showTransfer.value=true; tfError.value=''; tfLines.value=[tfNewLine()];
+  showTransfer.value=true; tfError.value=''; tfLines.value=[tfNewLine()]; tfRider.value='';
   try { const { data } = await api.get('/inventory/location-balances', { params:{ product: detailProduct.value._id } });
     const map={}; for (const b of data.balances) map[`${b.type}:${b.machine||''}`]=b.qty; tfBal.value=map;
   } catch { tfBal.value={}; }
+  if (!riders.value.length) { try { const { data } = await api.get('/riders'); riders.value = data.riders; } catch {} }
 }
 function tfSrcBal(l){ return tfBal.value[l.source]||0; }
 function tfDestAfter(l){ return l.dest ? (tfBal.value[l.dest]||0)+Number(l.quantity||0) : 0; }
@@ -44,7 +47,7 @@ async function tfSubmit(saveDraft){
       return { product:detailProduct.value._id, sourceType:st, sourceMachine:sm||null, destType:dt, destMachine:dm||null, quantity:Number(l.quantity) };
     });
     if(!lines.length){ tfError.value='Magdagdag ng kahit isang linya.'; tfSaving.value=false; return; }
-    await api.post('/transfers', { date:new Date().toISOString().slice(0,10), lines, saveDraft });
+    await api.post('/transfers', { date:new Date().toISOString().slice(0,10), assignedRider: tfRider.value || null, lines, saveDraft });
     showTransfer.value=false;
     await openProduct({ product: detailProduct.value }); // i-refresh ang per-location summary
     await loadBalances();
@@ -120,7 +123,10 @@ onMounted(async ()=>{ await loadMachines(); await loadBalances(); });
         <div v-if="showTransfer" class="tf-box mb-3">
           <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="section-eyebrow mb-0">New transfer · {{ detailProduct.name }}</span>
-            <span class="text-muted small">Transfer No. auto on save</span>
+            <select v-model="tfRider" class="form-select form-select-sm" style="max-width:190px">
+              <option value="">Assign to rider…</option>
+              <option v-for="r in riders" :key="r._id" :value="r._id">{{ r.name }}</option>
+            </select>
           </div>
           <div v-if="tfError" class="alert alert-danger py-1 small">{{ tfError }}</div>
           <div class="table-responsive">
