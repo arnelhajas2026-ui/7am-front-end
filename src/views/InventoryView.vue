@@ -13,6 +13,45 @@ const detailProduct = ref(null);
 const prodLoc = ref(null);
 const prodLocLoading = ref(false);
 
+// Inline transfer (mula sa Inventory screen — katabi ng Close; product naka-fix na).
+const showTransfer = ref(false);
+const tfSaving = ref(false);
+const tfError = ref('');
+const tfBal = ref({});          // locValue -> qty (para sa naka-fix na product)
+const tfLines = ref([]);
+const locOptions = computed(() => {
+  const opts = [{ value:'WAREHOUSE:', label:'Warehouse' }];
+  for (const m of machines.value) opts.push({ value:`MACHINE_LOADED:${m._id}`, label:(m.locationName||m.machineId) });
+  for (const m of machines.value) opts.push({ value:`SIDE_CABINET:${m._id}`, label:'Side Cabinet - '+(m.locationName||m.machineId) });
+  return opts;
+});
+const tfNewLine = () => ({ source:'WAREHOUSE:', dest:'', quantity:1 });
+async function openTransfer(){
+  showTransfer.value=true; tfError.value=''; tfLines.value=[tfNewLine()];
+  try { const { data } = await api.get('/inventory/location-balances', { params:{ product: detailProduct.value._id } });
+    const map={}; for (const b of data.balances) map[`${b.type}:${b.machine||''}`]=b.qty; tfBal.value=map;
+  } catch { tfBal.value={}; }
+}
+function tfSrcBal(l){ return tfBal.value[l.source]||0; }
+function tfDestAfter(l){ return l.dest ? (tfBal.value[l.dest]||0)+Number(l.quantity||0) : 0; }
+function tfAdd(){ tfLines.value.push(tfNewLine()); }
+function tfRemove(i){ tfLines.value.splice(i,1); if(!tfLines.value.length) tfAdd(); }
+async function tfSubmit(saveDraft){
+  tfSaving.value=true; tfError.value='';
+  try {
+    const lines = tfLines.value.filter(l=>Number(l.quantity)>0 && l.source && l.dest).map(l=>{
+      const [st,sm]=l.source.split(':'); const [dt,dm]=l.dest.split(':');
+      return { product:detailProduct.value._id, sourceType:st, sourceMachine:sm||null, destType:dt, destMachine:dm||null, quantity:Number(l.quantity) };
+    });
+    if(!lines.length){ tfError.value='Magdagdag ng kahit isang linya.'; tfSaving.value=false; return; }
+    await api.post('/transfers', { date:new Date().toISOString().slice(0,10), lines, saveDraft });
+    showTransfer.value=false;
+    await openProduct({ product: detailProduct.value }); // i-refresh ang per-location summary
+    await loadBalances();
+  } catch(e){ tfError.value = e.response?.data?.message || 'Could not transfer.'; }
+  finally { tfSaving.value=false; }
+}
+
 const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 
 async function loadMachines(){
@@ -71,8 +110,47 @@ onMounted(async ()=>{ await loadMachines(); await loadBalances(); });
       <div v-if="detailProduct" class="card mb-4"><div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h5 class="mb-0" style="font-family:var(--font-display)">{{ detailProduct.sku }} · {{ detailProduct.name }}</h5>
-          <button class="btn btn-ghost btn-sm" @click="detailProduct=null; prodLoc=null">Close</button>
+          <div class="d-flex gap-2">
+            <button class="btn btn-ghost btn-sm" @click="showTransfer ? (showTransfer=false) : openTransfer()">{{ showTransfer ? 'Hide transfer' : 'Transfer' }}</button>
+            <button class="btn btn-ghost btn-sm" @click="detailProduct=null; prodLoc=null; showTransfer=false">Close</button>
+          </div>
         </div>
+
+        <!-- Inline transfer form (product naka-fix na = {{ detailProduct.sku }}) -->
+        <div v-if="showTransfer" class="tf-box mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="section-eyebrow mb-0">New transfer · {{ detailProduct.name }}</span>
+            <span class="text-muted small">Transfer No. auto on save</span>
+          </div>
+          <div v-if="tfError" class="alert alert-danger py-1 small">{{ tfError }}</div>
+          <div class="table-responsive">
+            <table class="tf-table">
+              <thead><tr><th>Source location</th><th class="r">Src bal.</th><th>Destination</th><th class="r">Dest after</th><th class="r">Qty</th><th></th></tr></thead>
+              <tbody>
+                <tr v-for="(l,i) in tfLines" :key="i">
+                  <td><select v-model="l.source" class="form-select form-select-sm">
+                    <option v-for="o in locOptions" :key="o.value" :value="o.value">{{ o.label }}</option></select></td>
+                  <td class="r"><span :class="tfSrcBal(l)<Number(l.quantity||0) ? 'text-danger fw-semibold':''">{{ tfSrcBal(l) }}</span></td>
+                  <td><select v-model="l.dest" class="form-select form-select-sm">
+                    <option value="">— destination —</option>
+                    <option v-for="o in locOptions" :key="o.value" :value="o.value">{{ o.label }}</option></select></td>
+                  <td class="r">{{ l.dest ? tfDestAfter(l) : '—' }}</td>
+                  <td class="r" style="width:80px"><input v-model.number="l.quantity" type="number" class="form-control form-control-sm numeric" /></td>
+                  <td><button class="btn btn-ghost btn-sm" @click="tfRemove(i)">×</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-2">
+            <button class="btn btn-ghost btn-sm" @click="tfAdd">+ Add transfer</button>
+            <div class="d-flex gap-2">
+              <button class="btn btn-ghost btn-sm" :disabled="tfSaving" @click="tfSubmit(true)">{{ tfSaving ? '…' : 'Save as draft' }}</button>
+              <button class="btn btn-primary btn-sm" :disabled="tfSaving" @click="tfSubmit(false)">{{ tfSaving ? 'Saving…' : 'Submit' }}</button>
+            </div>
+          </div>
+          <div class="text-muted small mt-1">Kung kailangan ng approval, mapupunta muna sa Under Review — gagalaw lang ang stock pagka-approve sa Approvals section.</div>
+        </div>
+
         <div v-if="prodLocLoading" class="text-muted small">Loading…</div>
         <div v-else-if="prodLoc" class="card"><div class="card-body p-0" style="overflow-x:auto">
           <table class="fin-table ruled" style="min-width:680px">
@@ -145,4 +223,10 @@ onMounted(async ()=>{ await loadMachines(); await loadBalances(); });
 <style scoped>
 .click-row { cursor:pointer; }
 .click-row:hover { background:#F2F7FD; }
+.tf-box { border:1px solid var(--line); border-radius:12px; padding:.8rem .9rem; background:#FAFBFC; }
+.tf-table { width:100%; border-collapse:collapse; font-size:.84rem; min-width:560px; }
+.tf-table thead th { text-align:left; font-size:.62rem; text-transform:uppercase; letter-spacing:.03em; color:#3A4A5E; padding:.3rem .4rem; border-bottom:1px solid var(--line); }
+.tf-table thead th.r { text-align:right; }
+.tf-table tbody td { padding:.3rem .4rem; vertical-align:middle; }
+.tf-table tbody td.r { text-align:right; font-variant-numeric:tabular-nums; }
 </style>

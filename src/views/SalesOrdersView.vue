@@ -13,6 +13,11 @@ const selected = ref(null);
 const payments = ref([]);
 const pay = ref({ amount:0, type:'DOWN', reference:'' });
 
+// Terms: target installation date + optional 1%/month delay charge.
+const terms = ref({ targetInstallationDate:'', delayChargeEnabled:false });
+const delayInfo = ref(null);
+const isoForInput = (d)=> d ? new Date(d).toLocaleDateString('en-CA',{ timeZone:'Asia/Manila' }) : '';
+
 // supplier side
 const supplierPayments = ref([]);
 const supplierSummary = ref({ due:0, paid:0, balance:0 });
@@ -48,6 +53,8 @@ async function open(o){
     selected.value = data.order; payments.value = data.payments;
     supplierPayments.value = data.supplierPayments || [];
     supplierSummary.value = data.supplier || { due:0, paid:0, balance:0 };
+    terms.value = { targetInstallationDate: isoForInput(data.order.targetInstallationDate), delayChargeEnabled: !!data.order.delayChargeEnabled };
+    delayInfo.value = data.delayCharge || null;
     pay.value = { amount: data.order.amountPaid ? data.order.balance : Math.round(data.order.totalAmount*0.5), type: data.order.amountPaid ? 'FULL' : 'DOWN', reference:'' };
     spay.value = { amount: supplierSummary.value.balance || 0, currency:'PHP', fxRate:1, method:'', reference:'', supplier:'' };
   } catch(e){ error.value = e.response?.data?.message || 'Could not open order.'; }
@@ -63,6 +70,16 @@ async function recordPayment(){
     pay.value = { amount: data.order.balance, type:'FULL', reference:'' };
     await load();
   } catch(e){ error.value = e.response?.data?.message || 'Could not record payment.'; }
+  finally { busy.value=false; }
+}
+async function saveTerms(){
+  busy.value=true; error.value='';
+  try {
+    const { data } = await api.patch(`/sales-orders/${selected.value._id}/terms`, terms.value);
+    selected.value = data.order; delayInfo.value = data.delayCharge || null;
+    terms.value = { targetInstallationDate: isoForInput(data.order.targetInstallationDate), delayChargeEnabled: !!data.order.delayChargeEnabled };
+    await load();
+  } catch(e){ error.value = e.response?.data?.message || 'Could not save terms.'; }
   finally { busy.value=false; }
 }
 async function recordSupplierPayment(){
@@ -116,6 +133,27 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
 
       <div class="mb-3"><span class="pill" :class="statusClass(selected.status)">{{ selected.status }}</span>
         <span v-if="selected.invoiceNumber" class="pill ok ms-1">{{ selected.invoiceNumber }}</span></div>
+
+      <!-- ===== Terms: Target installation date + optional delay charge (machine orders) ===== -->
+      <template v-if="selected.kind!=='PRODUCT'">
+        <p class="section-eyebrow mb-2">Installation &amp; terms</p>
+        <div class="row g-2 align-items-end mb-2">
+          <div class="col-6 col-md-4"><label class="form-label">Target installation date</label>
+            <input v-model="terms.targetInstallationDate" type="date" class="form-control form-control-sm" /></div>
+          <div class="col-8 col-md-5"><label class="form-label d-block">Delay charge</label>
+            <div class="form-check"><input v-model="terms.delayChargeEnabled" type="checkbox" class="form-check-input" id="dc" />
+              <label class="form-check-label small" for="dc">Charge 1% / month for late payment (from installation)</label></div></div>
+          <div class="col-4 col-md-3"><button class="btn btn-ghost btn-sm w-100" :disabled="busy" @click="saveTerms">Save terms</button></div>
+        </div>
+        <div v-if="delayInfo && delayInfo.enabled && delayInfo.amount>0" class="alert alert-warning py-2 small mb-3">
+          ⚠ Delay charge: <strong>{{ peso(delayInfo.amount) }}</strong>
+          ({{ delayInfo.months }} month{{ delayInfo.months>1?'s':'' }} × 1% of {{ peso(delayInfo.balance) }} balance).
+          <span class="text-muted">Display lang — hindi auto-posted sa books.</span>
+        </div>
+        <div v-else-if="terms.delayChargeEnabled && selected.targetInstallationDate" class="text-muted small mb-3">
+          No delay charge yet (not past the installation date, or balance is settled).
+        </div>
+      </template>
 
       <!-- Product line items -->
       <div v-if="selected.kind==='PRODUCT' && selected.items?.length" class="card mb-3"><div class="card-body p-0" style="overflow-x:auto">

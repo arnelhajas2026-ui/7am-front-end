@@ -91,6 +91,13 @@ onMounted(load);
           <textarea v-model="referenceText" class="form-control" rows="8" placeholder="One product name per line"></textarea>
           <div class="text-muted small mt-1">Used for autocomplete suggestions on the Products page.</div></div>
 
+        <p class="section-eyebrow mt-4 mb-2">Controls</p>
+        <div class="form-check mb-3">
+          <input v-model="cfg.transferApprovalDelegated" type="checkbox" class="form-check-input" id="tfDelegate" />
+          <label class="form-check-label" for="tfDelegate">Delegate transfer approval to staff (auto-approve)</label>
+          <div class="text-muted small">Kapag naka-check, ang mga transfer ng staff ay <strong>agad na mako-Complete</strong> (gagalaw agad ang stock) nang hindi dumadaan sa iyong Approvals. Kapag naka-uncheck (default), <strong>kailangan ng approval mo</strong> bago gumalaw ang stock.</div>
+        </div>
+
         <button class="btn btn-primary" :disabled="saving" @click="save">{{ saving ? 'Saving…' : 'Save settings' }}</button>
       </div>
     </div>
