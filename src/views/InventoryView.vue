@@ -40,6 +40,7 @@ function tfDestAfter(l){ return l.dest ? (tfBal.value[l.dest]||0)+Number(l.quant
 function tfAdd(){ tfLines.value.push(tfNewLine()); }
 function tfRemove(i){ tfLines.value.splice(i,1); if(!tfLines.value.length) tfAdd(); }
 async function tfSubmit(saveDraft){
+  if (!tfRider.value){ tfError.value='Pumili ng rider sa "Assign to" (required).'; return; }
   tfSaving.value=true; tfError.value='';
   try {
     const lines = tfLines.value.filter(l=>Number(l.quantity)>0 && l.source && l.dest).map(l=>{
@@ -123,8 +124,8 @@ onMounted(async ()=>{ await loadMachines(); await loadBalances(); });
         <div v-if="showTransfer" class="tf-box mb-3">
           <div class="d-flex justify-content-between align-items-center mb-1">
             <span class="section-eyebrow mb-0">New transfer · {{ detailProduct.name }}</span>
-            <select v-model="tfRider" class="form-select form-select-sm" style="max-width:190px">
-              <option value="">Assign to rider…</option>
+            <select v-model="tfRider" class="form-select form-select-sm" :class="!tfRider && 'needs'" style="max-width:210px">
+              <option value="">Assign to rider… (required)</option>
               <option v-for="r in riders" :key="r._id" :value="r._id">{{ r.name }}</option>
             </select>
           </div>
@@ -235,4 +236,5 @@ onMounted(async ()=>{ await loadMachines(); await loadBalances(); });
 .tf-table thead th.r { text-align:right; }
 .tf-table tbody td { padding:.3rem .4rem; vertical-align:middle; }
 .tf-table tbody td.r { text-align:right; font-variant-numeric:tabular-nums; }
+.needs { border-color:var(--dawn-deep); box-shadow:0 0 0 .12rem rgba(224,138,0,.18); }
 </style>

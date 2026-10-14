@@ -97,6 +97,7 @@ function payload(saveDraft){
   return { date: form.value.date, assignedRider: form.value.assignedRider || null, lines, saveDraft };
 }
 async function submit(saveDraft){
+  if (!form.value.assignedRider){ error.value='Pumili ng rider sa "Assign to" (required).'; window.scrollTo({top:0,behavior:'smooth'}); return; }
   saving.value=true; error.value='';
   try { await api.post('/transfers', payload(saveDraft)); reset(); await load(); }
   catch(e){ error.value = e.response?.data?.message || 'Could not save transfer.'; }
@@ -186,8 +187,8 @@ onMounted(load);
       <div class="d-flex justify-content-between align-items-center mb-2">
         <p class="section-eyebrow mb-0">New transfer <span class="text-muted small">· Transfer No. auto on save (TRF-YYYY-#####)</span></p>
         <div class="d-flex gap-2">
-          <select v-model="form.assignedRider" class="form-select form-select-sm" style="max-width:190px">
-            <option value="">Assign to rider…</option>
+          <select v-model="form.assignedRider" class="form-select form-select-sm" :class="!form.assignedRider && 'needs'" style="max-width:210px">
+            <option value="">Assign to rider… (required)</option>
             <option v-for="r in riders" :key="r._id" :value="r._id">{{ r.name }}</option>
           </select>
           <input v-model="form.date" type="date" class="form-control form-control-sm" style="max-width:160px" />
@@ -254,4 +255,5 @@ onMounted(load);
 .pill.warn { background:#FFF3DF; color:var(--dawn-deep); }
 .pill.park { background:#E7F5E9; color:#2E7D32; }
 .pill.ack { background:#E6EEFB; color:#2451B3; }
+.needs { border-color:var(--dawn-deep); box-shadow:0 0 0 .12rem rgba(224,138,0,.18); }
 </style>
