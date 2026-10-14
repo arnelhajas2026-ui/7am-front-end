@@ -21,6 +21,7 @@ const ready = computed(() => connected.value && minElapsed.value);
 
 let pingTimer = null;
 let minTimer = null;
+let maxWaitTimer = null;
 let cancelled = false;
 
 async function ping() {
@@ -35,12 +36,16 @@ async function ping() {
 
 onMounted(() => {
   minTimer = setTimeout(() => { minElapsed.value = true; }, 4000);
+  // Safety net: kahit hindi sumagot ang /health (hal. cold start o network), ipakita pa rin
+  // ang login card pagkalipas ng 12s para hindi ma-trap ang user sa "connecting…" habambuhay.
+  maxWaitTimer = setTimeout(() => { connected.value = true; }, 12000);
   ping();
 });
 onUnmounted(() => {
   cancelled = true;
   clearTimeout(pingTimer);
   clearTimeout(minTimer);
+  clearTimeout(maxWaitTimer);
 });
 
 async function submit() {

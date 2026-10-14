@@ -89,7 +89,7 @@ onMounted(load);
       <h3 class="mb-0">Inventory Sub-Ledger</h3>
       <button class="btn btn-ghost btn-sm" @click="downloadCSV">⤓ CSV</button>
     </div>
-    <p class="text-muted">FIFO valuation per product. Dapat tumugma sa GL control account na Merchandise Inventory (1100). I-click ang isang product para sa movement history.</p>
+    <p class="text-muted">Weighted-average valuation per product. Dapat tumugma sa GL control account na Merchandise Inventory (1100). I-click ang isang product para sa movement history.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
 
     <!-- Reconciliation banner -->
@@ -155,7 +155,7 @@ onMounted(load);
     <div v-if="loading" class="text-muted">Loading…</div>
     <div v-else class="card"><div class="card-body p-0" style="overflow-x:auto">
       <table class="fin-table" style="min-width:620px">
-        <thead><tr><th class="lbl">SKU</th><th class="lbl">Product</th><th>Qty on Hand</th><th>Avg Cost</th><th>Value (FIFO)</th></tr></thead>
+        <thead><tr><th class="lbl">SKU</th><th class="lbl">Product</th><th>Qty on Hand</th><th>Avg Cost</th><th>Value (Wtd Avg)</th></tr></thead>
         <tbody>
           <tr v-for="r in visible" :key="r.product" class="click-row" @click="openLedger(r)">
             <td class="lbl">{{ r.sku }}</td>
