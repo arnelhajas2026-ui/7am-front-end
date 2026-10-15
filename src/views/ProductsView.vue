@@ -135,7 +135,7 @@ onMounted(load);
       <div class="card-body">
         <p class="section-eyebrow mb-3">{{ form.id ? 'Edit product' : 'New product' }}</p>
         <div class="row g-2">
-          <div class="col-6 col-md-3"><label class="form-label">SKU</label><input v-model="form.sku" class="form-control" :disabled="!!form.id" /></div>
+          <div class="col-6 col-md-3"><label class="form-label">SKU</label><input v-model="form.sku" class="form-control" /></div>
           <div class="col-6 col-md-5" style="position:relative">
             <label class="form-label">Name</label>
             <input v-model="form.name" class="form-control" autocomplete="off"
