@@ -8,6 +8,7 @@ const props = defineProps({
   title: { type: String, default: 'Export' },
   busy: { type: Boolean, default: false },
   defaultOrientation: { type: String, default: 'landscape' }, // portrait | landscape
+  allowExcel: { type: Boolean, default: true }, // itago ang Excel para sa Quotation/Invoice
 });
 const emit = defineEmits(['confirm', 'close']);
 
@@ -30,7 +31,7 @@ function go() { emit('confirm', { format: format.value, orientation: orientation
       <div class="btn-group w-100 mb-3" role="group">
         <button class="btn" :class="format==='pdf' ? 'btn-primary' : 'btn-ghost'" @click="format='pdf'">PDF</button>
         <button class="btn" :class="format==='docx' ? 'btn-primary' : 'btn-ghost'" @click="format='docx'">Word</button>
-        <button class="btn" :class="format==='xlsx' ? 'btn-primary' : 'btn-ghost'" @click="format='xlsx'">Excel</button>
+        <button v-if="allowExcel" class="btn" :class="format==='xlsx' ? 'btn-primary' : 'btn-ghost'" @click="format='xlsx'">Excel</button>
       </div>
 
       <div :class="{ 'xd-dim': format==='xlsx' }">

@@ -2,7 +2,8 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../services/api.js';
-import InvoiceDocument from '../components/InvoiceDocument.vue';
+import ExportDialog from '../components/ExportDialog.vue';
+import { downloadFromApi } from '../utils/exporters.js';
 import { fmtDate } from '../utils/datetime.js';
 
 const router = useRouter();
@@ -14,23 +15,31 @@ const error = ref('');
 const showForm = ref(false);
 const formKind = ref('MACHINE');     // MACHINE | PRODUCT
 const saving = ref(false);
-const showDoc = ref(false);
-const docData = ref(null);
 const selected = ref(null);
+
+// Export (server-generated PDF/Word — isang pahina, walang browser header/footer).
+const showExport = ref(false);
+const exporting = ref(false);
+const exportTarget = ref(null);
 
 const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 const round = (n) => Math.round(Number(n || 0) * 100) / 100;
 
 function viewQuote(q){ selected.value = q; window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function closeView(){ selected.value = null; }
-function printQuote(q){
-  const its = (q.kind === 'PRODUCT' && q.items?.length)
-    ? q.items.map((it) => ({ description: it.description || it.product?.name || 'Item', qty: it.quantity, unitPrice: it.unitPrice, amount: it.lineTotal }))
-    : [{ description: q.machineModel || 'Vending machine', qty: q.quantity, unitPrice: q.computed?.totalSelling || 0, amount: q.computed?.totalContract || 0 }];
-  const total = q.kind === 'PRODUCT' ? (q.total || q.computed?.totalContract || 0) : (q.computed?.totalContract || 0);
-  docData.value = { title: 'QUOTATION', docNo: q.quotationNumber, date: fmtDate(q.createdAt || Date.now()),
-    customerName: q.customer?.name || '', items: its, totalSales: total, discount: 0, withholding: 0, totalDue: total };
-  showDoc.value = true;
+// Buksan ang Export dialog (PDF/Word · Portrait/Landscape · A4/Letter).
+function printQuote(q){ exportTarget.value = q; showExport.value = true; }
+async function doExport({ format, orientation, paper }){
+  if(!exportTarget.value) return;
+  exporting.value = true; error.value = '';
+  try {
+    const id = exportTarget.value._id;
+    const base = `quotation_${exportTarget.value.quotationNumber || 'Q'}`;
+    await downloadFromApi(api, `/quotations/${id}/export`, { format, orientation, paper },
+      `${base}.${format==='docx' ? 'docx' : 'pdf'}`);
+    showExport.value = false;
+  } catch(e){ error.value = e.response?.data?.message || 'Could not export.'; }
+  finally { exporting.value = false; }
 }
 
 // ---- Machine quotation form (existing) ----
@@ -240,7 +249,8 @@ onMounted(load);
       <button class="btn btn-ghost btn-sm" @click="printQuote(q)">Print</button>
       <button v-if="q.status!=='CONVERTED'" class="btn btn-primary btn-sm" @click="convert(q)">Convert to order</button>
     </div></div>
-    <InvoiceDocument v-if="showDoc" :doc="docData" @close="showDoc=false" />
+    <ExportDialog :visible="showExport" :busy="exporting" title="Export quotation"
+      default-orientation="portrait" :allow-excel="false" @confirm="doExport" @close="showExport=false" />
   </div>
 </template>
 

@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import api from '../services/api.js';
-import InvoiceDocument from '../components/InvoiceDocument.vue';
+import ExportDialog from '../components/ExportDialog.vue';
+import { downloadFromApi } from '../utils/exporters.js';
 import { fmtDate } from '../utils/datetime.js';
 
 const orders = ref([]);
@@ -25,19 +26,20 @@ const spay = ref({ amount:0, currency:'PHP', fxRate:1, method:'', reference:'', 
 
 const busy = ref(false);
 
-const showDoc = ref(false);
-const docData = ref(null);
-function printInvoice(){
-  const o = selected.value;
-  const items = (o.kind === 'PRODUCT' && o.items?.length)
-    ? o.items.map((it) => ({ description: it.description || it.product?.name || 'Item', qty: it.quantity, unitPrice: it.unitPrice, amount: it.lineTotal }))
-    : [{ description: o.machineModel || 'Vending machine', qty: o.quantity, unitPrice: o.quantity ? o.totalAmount / o.quantity : o.totalAmount, amount: o.totalAmount }];
-  docData.value = {
-    title: 'SALES INVOICE', docNo: o.invoiceNumber || o.orderNumber, date: fmtDate(Date.now()),
-    customerName: o.customer?.name || '', items,
-    totalSales: o.totalAmount, discount: 0, withholding: 0, totalDue: o.totalAmount,
-  };
-  showDoc.value = true;
+// Export (server-generated Sales Invoice PDF/Word — isang pahina, walang browser artifacts).
+const showExport = ref(false);
+const exporting = ref(false);
+function printInvoice(){ showExport.value = true; }
+async function doExport({ format, orientation, paper }){
+  const o = selected.value; if(!o) return;
+  exporting.value = true; error.value = '';
+  try {
+    const base = `sales-invoice_${o.invoiceNumber || o.orderNumber || 'INV'}`;
+    await downloadFromApi(api, `/sales-orders/${o._id}/invoice-export`, { format, orientation, paper },
+      `${base}.${format==='docx' ? 'docx' : 'pdf'}`);
+    showExport.value = false;
+  } catch(e){ error.value = e.response?.data?.message || 'Could not export.'; }
+  finally { exporting.value = false; }
 }
 
 async function load(){
@@ -232,6 +234,7 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
       <span class="pill" :class="statusClass(o.status)">{{ o.status }}</span>
     </div></div>
 
-    <InvoiceDocument v-if="showDoc" :doc="docData" @close="showDoc=false" />
+    <ExportDialog :visible="showExport" :busy="exporting" title="Export sales invoice"
+      default-orientation="portrait" :allow-excel="false" @confirm="doExport" @close="showExport=false" />
   </div>
 </template>
