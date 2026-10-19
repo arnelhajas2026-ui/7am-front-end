@@ -64,8 +64,23 @@ function onProduct(line){
   fetchBalances(line.product);
 }
 
-// Options para sa searchable product dropdown.
+// Options para sa searchable product/customer dropdowns.
 const productOptions = computed(() => products.value.map((p) => ({ value:p._id, label:`${p.sku} · ${p.name}` })));
+const customerOptions = computed(() => customers.value.map((c) => ({ value:c._id, label:c.name })));
+
+// Duplicate check para sa inline na "New customer" sa product quotation.
+const custMatches = ref([]);
+let custTimer;
+function checkNewCustomer(){
+  clearTimeout(custTimer);
+  const name = (pform.newCustomerName || '').trim();
+  if(!pform.newCustomer || name.length < 2){ custMatches.value = []; return; }
+  custTimer = setTimeout(async () => {
+    try { const { data } = await api.get('/customers/check', { params:{ q: name } }); custMatches.value = data.matches || []; }
+    catch { custMatches.value = []; }
+  }, 300);
+}
+function useExistingCustomer(m){ pform.customer = m._id; pform.newCustomer = false; pform.newCustomerName = ''; custMatches.value = []; }
 
 // Source location options (Warehouse + bawat machine display + side cabinet) — katulad ng Transfer.
 const locOptions = computed(() => {
@@ -131,8 +146,17 @@ async function save(){
     if(formKind.value === 'PRODUCT'){
       let customerId = pform.customer;
       if(pform.newCustomer && pform.newCustomerName.trim()){
-        const { data } = await api.post('/customers', { name: pform.newCustomerName.trim() });
-        customerId = data.customer._id;
+        try {
+          const { data } = await api.post('/customers', { name: pform.newCustomerName.trim() });
+          customerId = data.customer._id;
+        } catch(ce){
+          if(ce.response?.status === 409){
+            custMatches.value = ce.response.data?.matches || [];
+            error.value = ce.response.data?.message || 'Existing customer na ang pangalan — piliin sa taas.';
+            saving.value=false; return;
+          }
+          throw ce;
+        }
       }
       const lines = pform.lines.filter((l) => l.product || l.description).map((l) => ({ product:l.product||undefined, description:l.description, quantity:Number(l.quantity)||0, unitPrice:Number(l.unitPrice)||0 }));
       if(!lines.length){ error.value='Magdagdag man lang ng isang produkto.'; saving.value=false; return; }
@@ -220,14 +244,22 @@ onMounted(load);
       <div class="row g-2 mb-2">
         <div class="col-12 col-md-5">
           <label class="form-label">Customer</label>
-          <select v-if="!pform.newCustomer" v-model="pform.customer" class="form-select"><option value="">—</option>
-            <option v-for="c in customers" :key="c._id" :value="c._id">{{ c.name }}</option></select>
-          <input v-else v-model="pform.newCustomerName" class="form-control" placeholder="New customer name" />
+          <SearchableSelect v-if="!pform.newCustomer" v-model="pform.customer" :options="customerOptions" placeholder="— search customer —" size="md" />
+          <input v-else v-model="pform.newCustomerName" class="form-control" placeholder="New customer name" @input="checkNewCustomer" />
         </div>
         <div class="col-12 col-md-4 d-flex align-items-end"><div class="form-check">
-          <input v-model="pform.newCustomer" class="form-check-input" type="checkbox" id="newc" /><label class="form-check-label ms-1" for="newc">New customer (add to master)</label></div></div>
+          <input v-model="pform.newCustomer" class="form-check-input" type="checkbox" id="newc" @change="checkNewCustomer" /><label class="form-check-label ms-1" for="newc">New customer (add to master)</label></div></div>
         <div class="col-6 col-md-3"><label class="form-label">VAT</label>
           <select v-model="pform.vatStatus" class="form-select"><option value="NON_VAT">Non-VAT</option><option value="VAT">VAT</option></select></div>
+      </div>
+
+      <!-- Duplicate warning sa inline na new customer -->
+      <div v-if="pform.newCustomer && custMatches.length" class="alert alert-warning py-2 mb-2">
+        <div class="fw-semibold mb-1">⚠ May existing na pareho/halos-parehong pangalan — piliin na lang:</div>
+        <div v-for="m in custMatches" :key="m._id" class="d-flex align-items-center justify-content-between py-1">
+          <span>{{ m.name }} <span class="text-muted small">{{ m.customerId }}<span v-if="m.email"> · {{ m.email }}</span></span></span>
+          <button class="btn btn-ghost btn-sm" @click="useExistingCustomer(m)">Use this</button>
+        </div>
       </div>
 
       <div class="pq-head d-none d-md-flex">
@@ -265,8 +297,7 @@ onMounted(load);
         <p class="section-eyebrow mb-3">Machine quotation</p>
         <div class="row g-2">
           <div class="col-12 col-md-6"><label class="form-label">Customer</label>
-            <select v-model="form.customer" class="form-select"><option value="">—</option>
-              <option v-for="c in customers" :key="c._id" :value="c._id">{{ c.name }}</option></select></div>
+            <SearchableSelect v-model="form.customer" :options="customerOptions" placeholder="— search customer —" size="md" /></div>
           <div class="col-8 col-md-4"><label class="form-label">Machine model</label><input v-model="form.machineModel" class="form-control" /></div>
           <div class="col-4 col-md-2"><label class="form-label">Qty</label><input v-model.number="form.quantity" type="number" class="form-control numeric" /></div>
           <div class="col-6 col-md-4"><label class="form-label">Supplier cost</label><input v-model.number="form.supplierCost" type="number" class="form-control numeric" /></div>
