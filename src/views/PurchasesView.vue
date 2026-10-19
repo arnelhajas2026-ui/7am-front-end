@@ -11,7 +11,11 @@ const error = ref('');
 const showForm = ref(false);
 const saving = ref(false);
 
-const form = ref({ supplier:'', reference:'', date:new Date().toISOString().slice(0,10), paymentMethod:'CREDIT', items:[] });
+const today = () => new Date().toISOString().slice(0,10);
+const plus30 = (d) => { const x = new Date(d||Date.now()); x.setDate(x.getDate()+30); return x.toISOString().slice(0,10); };
+const form = ref({ supplier:'', reference:'', date:today(), dueDate:plus30(today()), paymentMethod:'CREDIT', items:[] });
+// Kapag binago ang Date at walang manual na Due Date pa, i-default sa +30 araw (editable pa rin).
+function onDateChange(){ if(form.value.date) form.value.dueDate = plus30(form.value.date); }
 
 // --- Bulk import ---
 const showImport = ref(false);
@@ -32,9 +36,9 @@ async function runImport(){
 
 function addItem(){ form.value.items.push({ product:'', quantity:1, unitCost:0 }); }
 function removeItem(i){ form.value.items.splice(i,1); }
-function reset(){ form.value = { supplier:'', reference:'', date:new Date().toISOString().slice(0,10), paymentMethod:'CREDIT', items:[] }; showForm.value=false; }
+function reset(){ form.value = { supplier:'', reference:'', date:today(), dueDate:plus30(today()), paymentMethod:'CREDIT', items:[] }; showForm.value=false; }
 const total = computed(()=> form.value.items.reduce((s,i)=> s + Number(i.quantity||0)*Number(i.unitCost||0), 0));
-const peso = (n)=> '₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2});
+const peso = (n)=> '₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2, maximumFractionDigits:2});
 const balOf = (p)=> Number(p.total||0) - Number(p.amountPaid||0);
 const methodLabel = (m)=> m==='CASH' ? 'Cash' : m==='BANK' ? 'Bank' : 'Credit';
 
@@ -95,7 +99,7 @@ onMounted(load);
         <button class="btn btn-primary btn-sm" :disabled="importing" @click="runImport">{{ importing ? 'Importing…' : 'Import Purchase' }}</button>
       </div>
       <div class="text-muted small mt-2">
-        Columns: <strong>Reference, Date, Supplier, SKU</strong> (o Product name), <strong>Qty, Unit Cost, Payment</strong> (CREDIT/CASH/BANK).
+        Columns: <strong>Reference, Date, Due Date, Supplier, SKU</strong> (o Product name), <strong>Qty, Unit Cost, Payment</strong> (CREDIT/CASH/BANK).
         Ang mga row na may parehong <strong>Reference</strong> ay pinagsasama sa iisang purchase. Pang-migrate ng Jan-to-present.
       </div>
       <div v-if="importResult" class="alert alert-success py-2 mt-2 mb-0">
@@ -111,7 +115,7 @@ onMounted(load);
       <div class="d-flex justify-content-between align-items-start mb-3">
         <div>
           <h5 class="mb-0" style="font-family:var(--font-display)">{{ selected.supplier?.name || 'No supplier' }}</h5>
-          <div class="text-muted small">{{ fmtDate(selected.date) }}<span v-if="selected.reference"> · Ref: {{ selected.reference }}</span></div>
+          <div class="text-muted small">{{ fmtDate(selected.date) }}<span v-if="selected.dueDate"> · Due: {{ fmtDate(selected.dueDate) }}</span><span v-if="selected.reference"> · Ref: {{ selected.reference }}</span></div>
         </div>
         <button class="btn btn-ghost btn-sm" @click="closeView">Close</button>
       </div>
@@ -153,9 +157,10 @@ onMounted(load);
         <div class="col-12 col-md-4"><label class="form-label">Supplier</label>
           <select v-model="form.supplier" class="form-select"><option value="">—</option>
             <option v-for="s in suppliers" :key="s._id" :value="s._id">{{ s.name }}</option></select></div>
-        <div class="col-6 col-md-3"><label class="form-label">Reference</label><input v-model="form.reference" class="form-control" placeholder="Invoice #" /></div>
-        <div class="col-6 col-md-2"><label class="form-label">Date</label><input v-model="form.date" type="date" class="form-control" /></div>
-        <div class="col-12 col-md-3"><label class="form-label">Payment</label>
+        <div class="col-6 col-md-4"><label class="form-label">Reference</label><input v-model="form.reference" class="form-control" placeholder="Invoice #" /></div>
+        <div class="col-6 col-md-2"><label class="form-label">Date</label><input v-model="form.date" type="date" class="form-control" @change="onDateChange" /></div>
+        <div class="col-6 col-md-2"><label class="form-label">Due date</label><input v-model="form.dueDate" type="date" class="form-control" /></div>
+        <div class="col-6 col-md-4"><label class="form-label">Payment</label>
           <select v-model="form.paymentMethod" class="form-select">
             <option value="CREDIT">Credit (payable)</option>
             <option value="CASH">Cash (paid now)</option>
