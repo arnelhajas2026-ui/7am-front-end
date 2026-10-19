@@ -63,6 +63,14 @@ async function open(o){
 }
 function close(){ selected.value=null; }
 
+// Awtomatikong itakda ang amount ayon sa napiling type (iwas sa "Full pero Partial" na bug).
+function onPayTypeChange(){
+  const o = selected.value; if(!o) return;
+  if(pay.value.type==='FULL') pay.value.amount = o.balance;
+  else if(pay.value.type==='DOWN') pay.value.amount = Math.round(o.totalAmount * (o.downPaymentPercent||50)/100);
+  // PARTIAL: hayaang i-type ng user ang halaga
+}
+
 async function recordPayment(){
   busy.value=true; error.value='';
   try {
@@ -95,7 +103,11 @@ async function recordSupplierPayment(){
 }
 async function invoice(){
   busy.value=true; error.value='';
-  try { const { data } = await api.post(`/sales-orders/${selected.value._id}/invoice`); selected.value = data.order; await load(); }
+  try {
+    const { data } = await api.post(`/sales-orders/${selected.value._id}/invoice`);
+    selected.value = data.order; await load();
+    showExport.value = true;   // pagkatapos i-generate, buksan agad ang download (PDF/Word)
+  }
   catch(e){ error.value = e.response?.data?.message || 'Could not generate invoice.'; }
   finally { busy.value=false; }
 }
@@ -178,7 +190,7 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
         <div class="row g-2 align-items-end">
           <div class="col-4"><label class="form-label">Amount</label><input v-model.number="pay.amount" type="number" class="form-control numeric" /></div>
           <div class="col-4"><label class="form-label">Type</label>
-            <select v-model="pay.type" class="form-select"><option value="DOWN">Down</option><option value="PARTIAL">Partial</option><option value="FULL">Full</option></select></div>
+            <select v-model="pay.type" class="form-select" @change="onPayTypeChange"><option value="DOWN">Down</option><option value="PARTIAL">Partial</option><option value="FULL">Full</option></select></div>
           <div class="col-4"><button class="btn btn-primary w-100" :disabled="busy" @click="recordPayment">Record</button></div>
         </div>
       </template>
