@@ -26,6 +26,8 @@ const exportTarget = ref(null);
 
 const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 const round = (n) => Math.round(Number(n || 0) * 100) / 100;
+const today = () => new Date().toISOString().slice(0,10);
+const isoDay = (d) => d ? new Date(d).toISOString().slice(0,10) : today();
 
 function viewQuote(q){ selected.value = q; window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function closeView(){ selected.value = null; }
@@ -45,7 +47,7 @@ async function doExport({ format, orientation, paper }){
 }
 
 // ---- Machine quotation form (existing) ----
-const form = reactive({ customer:'', machineModel:'', quantity:1, supplierCost:0, freight:0, importation:0, bankCharges:0, delivery:0, installation:0, otherCosts:0, markupPercent:20, vatStatus:'NON_VAT' });
+const form = reactive({ customer:'', date:today(), machineModel:'', quantity:1, supplierCost:0, freight:0, importation:0, bankCharges:0, delivery:0, installation:0, otherCosts:0, markupPercent:20, vatStatus:'NON_VAT' });
 const computed_ = ref(null);
 let t;
 watch(form, () => { if(formKind.value==='MACHINE'){ clearTimeout(t); t = setTimeout(previewMachine, 250); } }, { deep:true });
@@ -53,7 +55,7 @@ async function previewMachine(){ try { const { data } = await api.post('/quotati
 
 // ---- Product quotation form (bago) ----
 const editingId = ref(null);     // kung may laman = nag-e-edit ng DRAFT na quotation
-const pform = reactive({ customer:'', newCustomer:false, newCustomerName:'', vatStatus:'NON_VAT',
+const pform = reactive({ customer:'', date:today(), newCustomer:false, newCustomerName:'', vatStatus:'NON_VAT',
   lines: [ blankLine(), blankLine() ] });
 function blankLine(){ return { product:'', description:'', quantity:1, unitPrice:0, source:'WAREHOUSE:' }; }
 function addLine(){ pform.lines.push(blankLine()); }
@@ -119,7 +121,7 @@ async function load(){
 }
 function resetProductForm(){
   editingId.value = null;
-  pform.customer=''; pform.newCustomer=false; pform.newCustomerName=''; pform.vatStatus='NON_VAT';
+  pform.customer=''; pform.date=today(); pform.newCustomer=false; pform.newCustomerName=''; pform.vatStatus='NON_VAT';
   pform.lines = [ blankLine(), blankLine() ];
 }
 function openForm(kind){
@@ -133,7 +135,7 @@ function editQuote(q){
   selected.value = null;
   formKind.value = 'PRODUCT'; showForm.value = true; editingId.value = q._id;
   pform.customer = q.customer?._id || q.customer || ''; pform.newCustomer=false; pform.newCustomerName='';
-  pform.vatStatus = q.vatStatus || 'NON_VAT';
+  pform.vatStatus = q.vatStatus || 'NON_VAT'; pform.date = isoDay(q.date || q.createdAt);
   pform.lines = (q.items||[]).map((it) => ({ product: it.product?._id || it.product || '', description: it.description||'', quantity: it.quantity||0, unitPrice: it.unitPrice||0, source:'WAREHOUSE:' }));
   if(!pform.lines.length) pform.lines = [ blankLine() ];
   pform.lines.forEach((l) => l.product && fetchBalances(l.product));
@@ -161,9 +163,9 @@ async function save(){
       const lines = pform.lines.filter((l) => l.product || l.description).map((l) => ({ product:l.product||undefined, description:l.description, quantity:Number(l.quantity)||0, unitPrice:Number(l.unitPrice)||0 }));
       if(!lines.length){ error.value='Magdagdag man lang ng isang produkto.'; saving.value=false; return; }
       if(editingId.value){
-        await api.patch(`/quotations/${editingId.value}`, { customer: customerId || undefined, vatStatus: pform.vatStatus, items: lines });
+        await api.patch(`/quotations/${editingId.value}`, { customer: customerId || undefined, date: pform.date, vatStatus: pform.vatStatus, items: lines });
       } else {
-        await api.post('/quotations', { kind:'PRODUCT', customer: customerId || undefined, vatStatus: pform.vatStatus, items: lines });
+        await api.post('/quotations', { kind:'PRODUCT', customer: customerId || undefined, date: pform.date, vatStatus: pform.vatStatus, items: lines });
       }
     } else {
       await api.post('/quotations', { kind:'MACHINE', ...form });
@@ -198,7 +200,9 @@ onMounted(load);
           <h5 class="mb-0" style="font-family:var(--font-display)">{{ selected.quotationNumber }}
             <span class="badge7 ms-1" :class="selected.kind==='PRODUCT' ? 'emp' : 'owner'">{{ selected.kind==='PRODUCT' ? 'PRODUCT' : 'MACHINE' }}</span>
             <span class="badge7 ms-1" :class="selected.status==='CONVERTED' ? 'owner' : 'emp'">{{ selected.status }}</span></h5>
-          <div class="text-muted small">{{ selected.customer?.name || 'No customer' }}</div>
+          <div class="text-muted small">{{ selected.customer?.name || 'No customer' }}
+            <span class="ms-1">· Date: {{ fmtDate(selected.date || selected.createdAt) }}</span>
+            <span class="ms-1">· Created: {{ fmtDate(selected.createdAt) }}</span></div>
         </div>
         <div class="d-flex gap-2">
           <button class="btn btn-ghost btn-sm" @click="printQuote(selected)">Print</button>
@@ -242,14 +246,16 @@ onMounted(load);
     <div v-if="showForm && formKind==='PRODUCT'" class="card mb-4"><div class="card-body">
       <p class="section-eyebrow mb-3">{{ editingId ? 'Edit quotation (Draft)' : 'New product quotation' }}</p>
       <div class="row g-2 mb-2">
-        <div class="col-12 col-md-5">
+        <div class="col-12 col-md-4">
           <label class="form-label">Customer</label>
           <SearchableSelect v-if="!pform.newCustomer" v-model="pform.customer" :options="customerOptions" placeholder="— search customer —" size="md" />
           <input v-else v-model="pform.newCustomerName" class="form-control" placeholder="New customer name" @input="checkNewCustomer" />
         </div>
-        <div class="col-12 col-md-4 d-flex align-items-end"><div class="form-check">
+        <div class="col-12 col-md-3 d-flex align-items-end"><div class="form-check">
           <input v-model="pform.newCustomer" class="form-check-input" type="checkbox" id="newc" @change="checkNewCustomer" /><label class="form-check-label ms-1" for="newc">New customer (add to master)</label></div></div>
-        <div class="col-6 col-md-3"><label class="form-label">VAT</label>
+        <div class="col-6 col-md-3"><label class="form-label">Date <span class="text-muted small">(editable)</span></label>
+          <input v-model="pform.date" type="date" class="form-control" /></div>
+        <div class="col-6 col-md-2"><label class="form-label">VAT</label>
           <select v-model="pform.vatStatus" class="form-select"><option value="NON_VAT">Non-VAT</option><option value="VAT">VAT</option></select></div>
       </div>
 
@@ -296,9 +302,11 @@ onMounted(load);
       <div class="col-12 col-lg-7"><div class="card"><div class="card-body">
         <p class="section-eyebrow mb-3">Machine quotation</p>
         <div class="row g-2">
-          <div class="col-12 col-md-6"><label class="form-label">Customer</label>
+          <div class="col-12 col-md-4"><label class="form-label">Customer</label>
             <SearchableSelect v-model="form.customer" :options="customerOptions" placeholder="— search customer —" size="md" /></div>
-          <div class="col-8 col-md-4"><label class="form-label">Machine model</label><input v-model="form.machineModel" class="form-control" /></div>
+          <div class="col-6 col-md-3"><label class="form-label">Date <span class="text-muted small">(editable)</span></label>
+            <input v-model="form.date" type="date" class="form-control" /></div>
+          <div class="col-6 col-md-3"><label class="form-label">Machine model</label><input v-model="form.machineModel" class="form-control" /></div>
           <div class="col-4 col-md-2"><label class="form-label">Qty</label><input v-model.number="form.quantity" type="number" class="form-control numeric" /></div>
           <div class="col-6 col-md-4"><label class="form-label">Supplier cost</label><input v-model.number="form.supplierCost" type="number" class="form-control numeric" /></div>
           <div class="col-6 col-md-4"><label class="form-label">Freight</label><input v-model.number="form.freight" type="number" class="form-control numeric" /></div>
