@@ -33,6 +33,15 @@ function viewQuote(q){ selected.value = q; window.scrollTo({ top: 0, behavior: '
 function closeView(){ selected.value = null; }
 // Buksan ang Export dialog (PDF/Word · Portrait/Landscape · A4/Letter).
 function printQuote(q){ exportTarget.value = q; showExport.value = true; }
+// Email ang quotation (PDF) sa customer.
+const sendMsg = ref('');
+const sending = ref('');
+async function sendQuote(q){
+  sending.value = q._id; error.value=''; sendMsg.value='';
+  try { const { data } = await api.post(`/quotations/${q._id}/send`); sendMsg.value = `Quotation ${q.quotationNumber} na-send sa ${data.to}.`; setTimeout(()=>sendMsg.value='', 4000); }
+  catch(e){ error.value = e.response?.data?.message || 'Could not send email.'; }
+  finally { sending.value=''; }
+}
 async function doExport({ format, orientation, paper }){
   if(!exportTarget.value) return;
   exporting.value = true; error.value = '';
@@ -192,6 +201,7 @@ onMounted(load);
     </div>
     <p class="text-muted">Mag-quote ng vending machine (calculator) o ng mga produkto (line items) para sa isang customer.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
+    <div v-if="sendMsg" class="alert alert-success py-2">{{ sendMsg }}</div>
 
     <!-- View quote -->
     <div v-if="selected" class="card mb-4"><div class="card-body">
@@ -348,6 +358,7 @@ onMounted(load);
       </div>
       <button class="btn btn-ghost btn-sm" @click="viewQuote(q)">View</button>
       <button class="btn btn-ghost btn-sm" @click="printQuote(q)">Print</button>
+      <button class="btn btn-ghost btn-sm" :disabled="sending===q._id" @click="sendQuote(q)">{{ sending===q._id ? 'Sending…' : 'Send' }}</button>
       <button v-if="q.kind==='PRODUCT' && q.status!=='CONVERTED'" class="btn btn-ghost btn-sm" @click="editQuote(q)">Edit</button>
       <button v-if="q.status!=='CONVERTED'" class="btn btn-primary btn-sm" @click="convert(q)">Convert to order</button>
     </div></div>

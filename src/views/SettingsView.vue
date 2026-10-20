@@ -12,6 +12,11 @@ const expenseText = ref('');
 const currencyText = ref('');
 const referenceText = ref('');
 
+// --- Email (SMTP) ---
+const smtpPass = ref('');          // bagong App Password lang (blangko = panatilihin ang naka-save)
+const testing = ref(false);
+const testMsg = ref('');
+
 // --- Clear test data (danger zone) ---
 const clearScope = ref('transactions');
 const clearConfirm = ref('');
@@ -39,6 +44,8 @@ async function load(){
   try {
     const { data } = await api.get('/config');
     cfg.value = data.config;
+    if(!cfg.value.smtp) cfg.value.smtp = { provider:'gmail', user:'', fromName:"7A'M Vending Machine Retailing", enabled:false, configured:false, host:'', port:587, secure:false };
+    smtpPass.value = '';
     expenseText.value = (data.config.expenseCategories||[]).join(', ');
     currencyText.value = (data.config.currencies||[]).join(', ');
     const ref = (data.config.productReference && data.config.productReference.length) ? data.config.productReference : PRODUCT_REFERENCE;
@@ -54,12 +61,21 @@ async function save(){
       expenseCategories: expenseText.value.split(',').map(s=>s.trim()).filter(Boolean),
       currencies: currencyText.value.split(',').map(s=>s.trim()).filter(Boolean),
       productReference: referenceText.value.split('\n').map(s=>s.trim()).filter(Boolean),
+      smtp: { ...cfg.value.smtp, pass: smtpPass.value || undefined },  // pass lang kung may bagong na-type
     };
     const { data } = await api.put('/config', payload);
-    cfg.value = data.config; saved.value=true;
+    cfg.value = data.config;
+    if(!cfg.value.smtp) cfg.value.smtp = { user:'', fromName:'', enabled:false, configured:false };
+    smtpPass.value = ''; saved.value=true;
     setTimeout(()=>saved.value=false, 2500);
   } catch(e){ error.value = e.response?.data?.message || 'Could not save. (Owner only.)'; }
   finally { saving.value=false; }
+}
+async function testEmail(){
+  testing.value=true; testMsg.value=''; error.value='';
+  try { const { data } = await api.post('/config/test-email', {}); testMsg.value = `Test email sent to ${data.to}. I-check ang inbox.`; }
+  catch(e){ error.value = e.response?.data?.message || 'SMTP test failed. I-check ang Gmail + App Password.'; }
+  finally { testing.value=false; }
 }
 onMounted(load);
 </script>
@@ -98,7 +114,34 @@ onMounted(load);
           <div class="text-muted small">Kapag naka-check, ang mga transfer ng staff ay <strong>agad na mako-Complete</strong> (gagalaw agad ang stock) nang hindi dumadaan sa iyong Approvals. Kapag naka-uncheck (default), <strong>kailangan ng approval mo</strong> bago gumalaw ang stock.</div>
         </div>
 
-        <button class="btn btn-primary" :disabled="saving" @click="save">{{ saving ? 'Saving…' : 'Save settings' }}</button>
+        <p class="section-eyebrow mt-4 mb-2">Email (for sending Quotations / Invoices)</p>
+        <div v-if="cfg.smtp" class="row g-3">
+          <div class="col-12 col-md-4"><label class="form-label">Provider</label>
+            <select v-model="cfg.smtp.provider" class="form-select">
+              <option value="gmail">Gmail</option><option value="yahoo">Yahoo Mail</option>
+            </select></div>
+          <div class="col-12 col-md-8"><label class="form-label">{{ cfg.smtp.provider==='yahoo' ? 'Yahoo email' : 'Gmail address' }}</label>
+            <input v-model="cfg.smtp.user" type="email" class="form-control" :placeholder="cfg.smtp.provider==='yahoo' ? 'yourbusiness@yahoo.com' : 'yourbusiness@gmail.com'" /></div>
+          <div class="col-12 col-md-6"><label class="form-label">App Password
+            <span class="text-muted small">{{ cfg.smtp.configured ? '(naka-set na — iwanang blangko kung hindi babaguhin)' : '(hindi regular password)' }}</span></label>
+            <input v-model="smtpPass" type="password" class="form-control" autocomplete="new-password" :placeholder="cfg.smtp.configured ? '•••••••••••• (naka-save na)' : 'App Password'" /></div>
+          <div class="col-12 col-md-6"><label class="form-label">From name (display)</label>
+            <input v-model="cfg.smtp.fromName" class="form-control" placeholder="7A'M Vending Machine Retailing" /></div>
+
+          <div class="col-12"><div class="form-check">
+            <input v-model="cfg.smtp.enabled" type="checkbox" class="form-check-input" id="smtpEn" />
+            <label class="form-check-label" for="smtpEn">I-enable ang email sending</label></div></div>
+        </div>
+        <div class="text-muted small mt-1">
+          <template v-if="cfg.smtp && cfg.smtp.provider==='yahoo'">Yahoo: kailangan ng <strong>App Password</strong> (hindi regular password). Gawa sa login.yahoo.com → Account Security → Generate app password.</template>
+          <template v-else>Gmail: kailangan ng <strong>App Password</strong> (hindi regular password) + naka-ON na 2-Step Verification. Google Account → Security → App passwords.</template>
+        </div>
+        <div v-if="testMsg" class="alert alert-success py-2 mt-2 mb-0">{{ testMsg }}</div>
+
+        <div class="d-flex gap-2 mt-3">
+          <button class="btn btn-primary" :disabled="saving" @click="save">{{ saving ? 'Saving…' : 'Save settings' }}</button>
+          <button class="btn btn-ghost" :disabled="testing" @click="testEmail">{{ testing ? 'Testing…' : 'Send test email' }}</button>
+        </div>
       </div>
     </div>
 

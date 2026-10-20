@@ -30,6 +30,16 @@ const busy = ref(false);
 const showExport = ref(false);
 const exporting = ref(false);
 function printInvoice(){ showExport.value = true; }
+// Email ang Sales Invoice (PDF) sa customer.
+const sendMsg = ref('');
+const sendingInv = ref(false);
+async function sendInvoice(){
+  const o = selected.value; if(!o) return;
+  sendingInv.value = true; error.value=''; sendMsg.value='';
+  try { const { data } = await api.post(`/sales-orders/${o._id}/send-invoice`); sendMsg.value = `Invoice na-send sa ${data.to}.`; setTimeout(()=>sendMsg.value='', 4000); }
+  catch(e){ error.value = e.response?.data?.message || 'Could not send invoice.'; }
+  finally { sendingInv.value=false; }
+}
 async function doExport({ format, orientation, paper }){
   const o = selected.value; if(!o) return;
   exporting.value = true; error.value = '';
@@ -124,6 +134,7 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
     <h3 class="mb-1">Sales Orders</h3>
     <p class="text-muted">Collect the down payment, pay the supplier, settle the balance, then invoice.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
+    <div v-if="sendMsg" class="alert alert-success py-2">{{ sendMsg }}</div>
 
     <div v-if="selected" class="card mb-4"><div class="card-body">
       <div class="d-flex justify-content-between align-items-start mb-3">
@@ -136,6 +147,7 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
           </div>
         </div>
         <div class="d-flex gap-2"><button class="btn btn-ghost btn-sm" @click="printInvoice">Print invoice</button>
+        <button class="btn btn-ghost btn-sm" :disabled="sendingInv" @click="sendInvoice">{{ sendingInv ? 'Sending…' : 'Send invoice' }}</button>
         <button class="btn btn-ghost btn-sm" @click="close">Close</button></div>
       </div>
 
