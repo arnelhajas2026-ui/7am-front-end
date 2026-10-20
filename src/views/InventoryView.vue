@@ -12,6 +12,7 @@ const context = ref('WAREHOUSE'); // 'WAREHOUSE' | 'ALL' | machine _id
 const detailProduct = ref(null);
 const prodLoc = ref(null);
 const prodLocLoading = ref(false);
+const showEmpty = ref(false);   // ipakita ang mga lokasyong may balanseng 0 (hal. side cabinet)
 
 // Inline transfer (mula sa Inventory screen — katabi ng Close; product naka-fix na).
 const showTransfer = ref(false);
@@ -78,10 +79,12 @@ function change(){ detailProduct.value=null; prodLoc.value=null; loadBalances();
 async function openProduct(r){
   detailProduct.value = r.product;
   prodLocLoading.value=true; prodLoc.value=null;
-  try { const { data } = await api.get('/inventory/product-locations', { params:{ product: r.product._id } }); prodLoc.value = data; }
+  try { const { data } = await api.get('/inventory/product-locations', { params:{ product: r.product._id, includeEmpty: showEmpty.value ? 1 : undefined } }); prodLoc.value = data; }
   catch(e){ error.value = e.response?.data?.message || 'Could not load product locations.'; }
   finally { prodLocLoading.value=false; }
 }
+// I-toggle ang pagpapakita ng empty (0) na lokasyon at i-refresh ang summary.
+async function toggleEmpty(){ if(detailProduct.value) await openProduct({ product: detailProduct.value }); }
 
 const loaded = computed(()=> rows.value.filter(r=>r.type==='MACHINE_LOADED'));
 const cabinet = computed(()=> rows.value.filter(r=>r.type==='SIDE_CABINET'));
@@ -158,6 +161,10 @@ onMounted(async ()=>{ await loadMachines(); await loadBalances(); });
           <div class="text-muted small mt-1">Kung kailangan ng approval, mapupunta muna sa Under Review — gagalaw lang ang stock pagka-approve sa Approvals section.</div>
         </div>
 
+        <div class="form-check mb-2">
+          <input v-model="showEmpty" type="checkbox" class="form-check-input" id="showEmpty" @change="toggleEmpty" />
+          <label class="form-check-label small" for="showEmpty">Ipakita ang mga lokasyong walang laman (0) — hal. side cabinet na dinaanan lang ng stock</label>
+        </div>
         <div v-if="prodLocLoading" class="text-muted small">Loading…</div>
         <div v-else-if="prodLoc" class="card"><div class="card-body p-0" style="overflow-x:auto">
           <table class="fin-table ruled" style="min-width:680px">
