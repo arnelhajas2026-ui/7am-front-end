@@ -25,6 +25,7 @@ export const NAV = [
   { name: 'subledgerinventory', label: 'Inventory Sub-Ledger', icon: 'layers', module: 'accounting', group: 'Accounting' },
   { name: 'subledgerap', label: 'AP Sub-Ledger', icon: 'truck',  module: 'accounting', group: 'Accounting' },
   { name: 'subledgerar', label: 'AR Sub-Ledger', icon: 'ledger', module: 'accounting', group: 'Accounting' },
+  { name: 'subledgermachine', label: 'Machine Inventory Sub-Ledger', icon: 'layers', module: 'accounting', group: 'Accounting' },
   { name: 'openingbalances', label: 'Opening Balances', icon: 'journal', module: 'accounting', group: 'Accounting' },
   { name: 'periodclose', label: 'Period Close', icon: 'scale', module: 'accounting', group: 'Accounting' },
   { name: 'fixedassets', label: 'Fixed Assets', icon: 'server', module: 'accounting', group: 'Accounting' },

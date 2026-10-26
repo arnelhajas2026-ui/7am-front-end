@@ -111,6 +111,16 @@ async function recordSupplierPayment(){
   } catch(e){ error.value = e.response?.data?.message || 'Could not record supplier payment.'; }
   finally { busy.value=false; }
 }
+// Machine delivery stage: DELIVERED_7AM (Dr 1130 / Cr 1060) → DELIVERED_CUSTOMER (Dr 5020 / Cr 1130).
+async function setStage(stage){
+  busy.value=true; error.value='';
+  try {
+    const { data } = await api.patch(`/sales-orders/${selected.value._id}/machine-stage`, { stage });
+    selected.value = data.order; supplierSummary.value = data.supplier || supplierSummary.value;
+    await load();
+  } catch(e){ error.value = e.response?.data?.message || 'Could not update delivery stage.'; }
+  finally { busy.value=false; }
+}
 async function invoice(){
   busy.value=true; error.value='';
   try {
@@ -225,6 +235,31 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
         <div class="col-4"><div class="tile sm"><div class="tlabel">Paid</div><div class="tval">{{ peso(supplierSummary.paid) }}</div></div></div>
         <div class="col-4"><div class="tile sm"><div class="tlabel">Balance</div><div class="tval" :class="supplierSummary.balance>0 && 'warn'">{{ peso(supplierSummary.balance) }}</div></div></div>
       </div>
+
+      <!-- ===== Machine delivery lifecycle (2 auto JEs) ===== -->
+      <div class="card mb-3" style="background:#f8fafc"><div class="card-body py-2">
+        <p class="section-eyebrow mb-2">Machine delivery</p>
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+          <span class="badge7" :class="selected.machineStage==='DELIVERED_CUSTOMER' ? 'ack' : selected.machineStage==='DELIVERED_7AM' ? 'owner' : 'emp'">
+            {{ selected.machineStage==='DELIVERED_CUSTOMER' ? 'Delivered to Customer' : selected.machineStage==='DELIVERED_7AM' ? "Delivered to 7A'M" : 'Ordered (not yet delivered)' }}
+          </span>
+          <span v-if="selected.delivered7AMDate" class="text-muted small">· To 7A'M: {{ dt(selected.delivered7AMDate) }}</span>
+          <span v-if="selected.deliveredCustomerDate" class="text-muted small">· To Customer: {{ dt(selected.deliveredCustomerDate) }}</span>
+        </div>
+        <div class="d-flex gap-3 flex-wrap">
+          <label class="form-check-label d-flex align-items-center gap-1">
+            <input type="radio" class="form-check-input" :checked="selected.machineStage!=='ORDERED'"
+              :disabled="busy || selected.machineStage!=='ORDERED'" @change="setStage('DELIVERED_7AM')" />
+            Delivered to 7A'M <span class="text-muted small">(Dr Inventory – Machines for Resale / Cr Advances to Supplier)</span>
+          </label>
+          <label class="form-check-label d-flex align-items-center gap-1">
+            <input type="radio" class="form-check-input" :checked="selected.machineStage==='DELIVERED_CUSTOMER'"
+              :disabled="busy || selected.machineStage!=='DELIVERED_7AM'" @change="setStage('DELIVERED_CUSTOMER')" />
+            Delivered to Customer <span class="text-muted small">(Dr COGS – Machines / Cr Inventory – Machines for Resale)</span>
+          </label>
+        </div>
+        <div class="text-muted small mt-1">Cost basis: {{ peso(selected.machineCost || supplierSummary.due) }} (supplier cost × qty). Sunod-sunod: 7A'M muna bago Customer.</div>
+      </div></div>
 
       <div class="row g-2 align-items-end mb-2">
         <div class="col-6 col-md-3"><label class="form-label">Amount</label><input v-model.number="spay.amount" type="number" class="form-control form-control-sm numeric" /></div>
