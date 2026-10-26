@@ -55,10 +55,10 @@ onMounted(load);
 
     <div v-if="loading" class="text-muted">Loading…</div>
     <div v-else class="card"><div class="card-body p-0" style="overflow-x:auto">
-      <table class="fin-table ruled" style="min-width:1400px">
+      <table class="fin-table ruled" style="min-width:1500px">
         <thead><tr>
           <th class="lbl">Customer ID</th><th class="lbl">Customer Name</th><th class="lbl">Invoice No.</th><th class="lbl">Invoice Date</th><th class="lbl">Due Date</th>
-          <th class="lbl">Description</th><th>Original</th><th>Payments</th><th>Outstanding</th><th>Days Past Due</th>
+          <th class="lbl">Description</th><th class="lbl">Cost Center</th><th>Original</th><th>Payments</th><th>Outstanding</th><th>Days Past Due</th>
           <th class="lbl">Aging</th><th class="lbl">Status</th><th class="lbl">Last Payment</th><th class="lbl">Payment Ref</th><th class="lbl">Remarks</th>
         </tr></thead>
         <tbody>
@@ -69,6 +69,7 @@ onMounted(load);
             <td class="lbl">{{ r.invoiceDate ? fmtDate(r.invoiceDate) : '—' }}</td>
             <td class="lbl">{{ r.dueDate ? fmtDate(r.dueDate) : '—' }}</td>
             <td class="lbl">{{ r.description }}</td>
+            <td class="lbl">{{ r.costCenter || '—' }}</td>
             <td class="num">{{ peso(r.original) }}</td>
             <td class="num">{{ r.payments ? peso(r.payments) : '' }}</td>
             <td class="num fw-semibold">{{ peso(r.outstanding) }}</td>
@@ -79,9 +80,9 @@ onMounted(load);
             <td class="lbl">{{ r.paymentReference }}</td>
             <td class="lbl text-muted small">{{ r.remarks }}</td>
           </tr>
-          <tr v-if="!rows.length"><td colspan="15" class="text-center text-muted py-3">Walang receivable.</td></tr>
+          <tr v-if="!rows.length"><td colspan="16" class="text-center text-muted py-3">Walang receivable.</td></tr>
         </tbody>
-        <tfoot v-if="rows.length"><tr class="gp"><td class="lbl" colspan="8">Total outstanding</td><td class="num fw-bold">{{ peso(total) }}</td><td colspan="6"></td></tr></tfoot>
+        <tfoot v-if="rows.length"><tr class="gp"><td class="lbl" colspan="9">Total outstanding</td><td class="num fw-bold">{{ peso(total) }}</td><td colspan="6"></td></tr></tfoot>
       </table>
     </div></div>
 
