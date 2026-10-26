@@ -17,6 +17,7 @@ const detailLoading = ref(false);
 const showExport = ref(false);
 const exporting = ref(false);
 const exportSupplier = ref('');     // '' = summary, else supplier id
+const exportAll = ref(false);       // true = detalye ng LAHAT ng supplier
 
 const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 const reconciled = computed(() => control.value && Math.abs(control.value.diff) < 0.01);
@@ -38,13 +39,15 @@ async function openDetail(r) {
   } catch (e) { error.value = e.response?.data?.message || 'Could not load supplier detail.'; }
   finally { detailLoading.value = false; }
 }
-function openExport(supplierId) { exportSupplier.value = supplierId || ''; showExport.value = true; }
+function openExport(supplierId) { exportSupplier.value = supplierId || ''; exportAll.value = false; showExport.value = true; }
+function openExportAll() { exportSupplier.value = ''; exportAll.value = true; showExport.value = true; }
 async function onExport({ format, orientation, paper }) {
   exporting.value = true; error.value = '';
   try {
     const params = { format, orientation, paper };
-    if (exportSupplier.value) params.supplier = exportSupplier.value;
-    const base = exportSupplier.value ? 'ap-ledger' : 'ap-summary';
+    if (exportAll.value) params.all = 1;
+    else if (exportSupplier.value) params.supplier = exportSupplier.value;
+    const base = exportAll.value ? 'ap-ledger_all' : (exportSupplier.value ? 'ap-ledger' : 'ap-summary');
     await downloadFromApi(api, '/ledger/ap-export', params, `${base}.${format === 'docx' ? 'docx' : format === 'xlsx' ? 'xlsx' : 'pdf'}`);
     showExport.value = false;
   } catch (e) { error.value = e.response?.data?.message || 'Could not export.'; }
@@ -62,7 +65,10 @@ onMounted(load);
   <div>
     <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-1">
       <h3 class="mb-0">Accounts Payable Sub-Ledger</h3>
-      <button class="btn btn-ghost btn-sm" @click="openExport('')">⤓ Export (PDF / Word / Excel)</button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-ghost btn-sm" @click="openExportAll">⤓ Export full detail</button>
+        <button class="btn btn-ghost btn-sm" @click="openExport('')">⤓ Export summary</button>
+      </div>
     </div>
     <p class="text-muted">Natitirang utang sa bawat supplier (credit purchases). Dapat tumugma sa GL Accounts Payable (2010). I-click ang supplier para sa transaction detail.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
@@ -134,7 +140,7 @@ onMounted(load);
     </div></div>
 
     <ExportDialog :visible="showExport" :busy="exporting" default-orientation="portrait"
-      :title="exportSupplier ? 'Export AP Detail' : 'Export AP Summary'"
+      :title="exportAll ? 'Export AP Full Detail' : exportSupplier ? 'Export AP Detail' : 'Export AP Summary'"
       @confirm="onExport" @close="showExport = false" />
   </div>
 </template>
