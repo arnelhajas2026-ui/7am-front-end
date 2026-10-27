@@ -232,7 +232,10 @@ onMounted(load);
           <tfoot>
             <tr><td colspan="3" class="lbl">Subtotal</td><td class="num">{{ peso(selected.subtotal) }}</td></tr>
             <tr v-if="selected.vatAmount"><td colspan="3" class="lbl">VAT</td><td class="num">{{ peso(selected.vatAmount) }}</td></tr>
-            <tr class="gp"><td colspan="3" class="lbl">Total</td><td class="num fw-bold">{{ peso(selected.total) }}</td></tr>
+            <tr><td colspan="3" class="lbl">Total Sales</td><td class="num">{{ peso(selected.total) }}</td></tr>
+            <tr v-if="selected.discount"><td colspan="3" class="lbl">Less Discount (SC/PWD/NAAC/MOV/SP)</td><td class="num">− {{ peso(selected.discount) }}</td></tr>
+            <tr v-if="selected.withholding"><td colspan="3" class="lbl">Less Withholding Tax</td><td class="num">− {{ peso(selected.withholding) }}</td></tr>
+            <tr class="gp"><td colspan="3" class="lbl">Total Amount Due</td><td class="num fw-bold">{{ peso(Math.max(0, round((selected.total||0) - (selected.discount||0) - (selected.withholding||0)))) }}</td></tr>
           </tfoot>
         </table>
       </template>
