@@ -56,7 +56,7 @@ async function doExport({ format, orientation, paper }){
 }
 
 // ---- Machine quotation form (existing) ----
-const form = reactive({ customer:'', date:today(), machineModel:'', quantity:1, supplierCost:0, freight:0, importation:0, bankCharges:0, delivery:0, installation:0, otherCosts:0, markupPercent:20, vatStatus:'NON_VAT' });
+const form = reactive({ customer:'', date:today(), machineModel:'', quantity:1, supplierCost:0, freight:0, importation:0, bankCharges:0, delivery:0, installation:0, otherCosts:0, markupPercent:20, vatStatus:'NON_VAT', discount:0, withholding:0 });
 const computed_ = ref(null);
 let t;
 watch(form, () => { if(formKind.value==='MACHINE'){ clearTimeout(t); t = setTimeout(previewMachine, 250); } }, { deep:true });
@@ -64,7 +64,7 @@ async function previewMachine(){ try { const { data } = await api.post('/quotati
 
 // ---- Product quotation form (bago) ----
 const editingId = ref(null);     // kung may laman = nag-e-edit ng DRAFT na quotation
-const pform = reactive({ customer:'', date:today(), newCustomer:false, newCustomerName:'', vatStatus:'NON_VAT',
+const pform = reactive({ customer:'', date:today(), newCustomer:false, newCustomerName:'', vatStatus:'NON_VAT', discount:0, withholding:0,
   lines: [ blankLine(), blankLine() ] });
 function blankLine(){ return { product:'', description:'', quantity:1, unitPrice:0, source:'WAREHOUSE:' }; }
 function addLine(){ pform.lines.push(blankLine()); }
@@ -130,7 +130,7 @@ async function load(){
 }
 function resetProductForm(){
   editingId.value = null;
-  pform.customer=''; pform.date=today(); pform.newCustomer=false; pform.newCustomerName=''; pform.vatStatus='NON_VAT';
+  pform.customer=''; pform.date=today(); pform.newCustomer=false; pform.newCustomerName=''; pform.vatStatus='NON_VAT'; pform.discount=0; pform.withholding=0;
   pform.lines = [ blankLine(), blankLine() ];
 }
 function openForm(kind){
@@ -145,6 +145,7 @@ function editQuote(q){
   formKind.value = 'PRODUCT'; showForm.value = true; editingId.value = q._id;
   pform.customer = q.customer?._id || q.customer || ''; pform.newCustomer=false; pform.newCustomerName='';
   pform.vatStatus = q.vatStatus || 'NON_VAT'; pform.date = isoDay(q.date || q.createdAt);
+  pform.discount = q.discount || 0; pform.withholding = q.withholding || 0;
   pform.lines = (q.items||[]).map((it) => ({ product: it.product?._id || it.product || '', description: it.description||'', quantity: it.quantity||0, unitPrice: it.unitPrice||0, source:'WAREHOUSE:' }));
   if(!pform.lines.length) pform.lines = [ blankLine() ];
   pform.lines.forEach((l) => l.product && fetchBalances(l.product));
@@ -171,10 +172,11 @@ async function save(){
       }
       const lines = pform.lines.filter((l) => l.product || l.description).map((l) => ({ product:l.product||undefined, description:l.description, quantity:Number(l.quantity)||0, unitPrice:Number(l.unitPrice)||0 }));
       if(!lines.length){ error.value='Magdagdag man lang ng isang produkto.'; saving.value=false; return; }
+      const deductions = { discount: Number(pform.discount)||0, withholding: Number(pform.withholding)||0 };
       if(editingId.value){
-        await api.patch(`/quotations/${editingId.value}`, { customer: customerId || undefined, date: pform.date, vatStatus: pform.vatStatus, items: lines });
+        await api.patch(`/quotations/${editingId.value}`, { customer: customerId || undefined, date: pform.date, vatStatus: pform.vatStatus, items: lines, ...deductions });
       } else {
-        await api.post('/quotations', { kind:'PRODUCT', customer: customerId || undefined, date: pform.date, vatStatus: pform.vatStatus, items: lines });
+        await api.post('/quotations', { kind:'PRODUCT', customer: customerId || undefined, date: pform.date, vatStatus: pform.vatStatus, items: lines, ...deductions });
       }
     } else {
       await api.post('/quotations', { kind:'MACHINE', ...form });
@@ -298,10 +300,18 @@ onMounted(load);
         ⚠ Kulang ang stock sa napiling source location para sa isa o higit pang linya (negatibo ang balance after).
       </p>
 
+      <div class="row g-2 justify-content-end mt-2">
+        <div class="col-6 col-md-3"><label class="form-label">Less Discount (SC/PWD/NAAC/MOV/SP)</label>
+          <input v-model.number="pform.discount" type="number" min="0" class="form-control form-control-sm numeric text-end" /></div>
+        <div class="col-6 col-md-3"><label class="form-label">Less Withholding Tax</label>
+          <input v-model.number="pform.withholding" type="number" min="0" class="form-control form-control-sm numeric text-end" /></div>
+      </div>
+
       <div class="d-flex justify-content-end align-items-center gap-3 mt-3 flex-wrap">
         <span>Subtotal: <strong class="numeric">{{ peso(productTotals.subtotal) }}</strong></span>
         <span v-if="pform.vatStatus==='VAT'">VAT: <strong class="numeric">{{ peso(productTotals.vatAmount) }}</strong></span>
         <span>Total: <strong class="numeric">{{ peso(productTotals.total) }}</strong></span>
+        <span>Amount Due: <strong class="numeric">{{ peso(Math.max(0, round(productTotals.total - (pform.discount||0) - (pform.withholding||0)))) }}</strong></span>
         <button class="btn btn-ghost" @click="showForm=false; editingId=null">Cancel</button>
         <button class="btn btn-primary" :disabled="saving" @click="save">{{ saving ? 'Saving…' : (editingId ? 'Save changes' : 'Save quotation') }}</button>
       </div>
@@ -328,6 +338,8 @@ onMounted(load);
           <div class="col-6 col-md-4"><label class="form-label">Markup %</label><input v-model.number="form.markupPercent" type="number" class="form-control numeric" /></div>
           <div class="col-6 col-md-4"><label class="form-label">VAT</label>
             <select v-model="form.vatStatus" class="form-select"><option value="VAT">VAT</option><option value="NON_VAT">Non-VAT</option></select></div>
+          <div class="col-6 col-md-4"><label class="form-label">Less Discount (SC/PWD/NAAC/MOV/SP)</label><input v-model.number="form.discount" type="number" min="0" class="form-control numeric" /></div>
+          <div class="col-6 col-md-4"><label class="form-label">Less Withholding Tax</label><input v-model.number="form.withholding" type="number" min="0" class="form-control numeric" /></div>
         </div>
         <button class="btn btn-primary mt-3" :disabled="saving" @click="save">{{ saving ? 'Saving…' : 'Save quotation' }}</button>
       </div></div></div>

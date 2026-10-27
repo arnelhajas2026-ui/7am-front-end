@@ -7,7 +7,7 @@ const loading = ref(false);
 const error = ref('');
 const showForm = ref(false);
 const saving = ref(false);
-const form = ref({ id: null, name: '', email: '', contact: '', address: '', notes: '' });
+const form = ref({ id: null, name: '', registeredName: '', tin: '', email: '', contact: '', address: '', notes: '' });
 
 // Duplicate detection (live habang nagta-type ng pangalan).
 const dupMatches = ref([]);
@@ -24,7 +24,7 @@ function checkDup(){
 function editExisting(m){ const row = items.value.find(x => x._id === m._id); if(row) edit(row); dupMatches.value = []; }
 
 function initials(n){ return (n||'?').charAt(0).toUpperCase(); }
-function reset(){ form.value = { id:null, name:'', email:'', contact:'', address:'', notes:'' }; dupMatches.value=[]; showForm.value=false; }
+function reset(){ form.value = { id:null, name:'', registeredName:'', tin:'', email:'', contact:'', address:'', notes:'' }; dupMatches.value=[]; showForm.value=false; }
 
 async function load(){
   loading.value=true; error.value='';
@@ -45,7 +45,7 @@ async function save(force){
   }
   finally { saving.value=false; }
 }
-function edit(row){ form.value = { id:row._id, name:row.name, email:row.email, contact:row.contact, address:row.address, notes:row.notes }; dupMatches.value=[]; showForm.value=true; }
+function edit(row){ form.value = { id:row._id, name:row.name, registeredName:row.registeredName, tin:row.tin, email:row.email, contact:row.contact, address:row.address, notes:row.notes }; dupMatches.value=[]; showForm.value=true; }
 async function toggle(row){
   try { const { data } = await api.put(`/customers/${row._id}`, { ...row, active: !row.active });
     const i = items.value.findIndex(x=>x._id===row._id); if(i!==-1) items.value[i]=data.customer;
@@ -70,9 +70,11 @@ onMounted(load);
         <p class="section-eyebrow mb-3">{{ form.id ? 'Edit customer' : 'New customer' }}</p>
         <div class="row g-2">
           <div class="col-12 col-md-6"><label class="form-label">Name</label><input v-model="form.name" class="form-control" @input="checkDup" /></div>
+          <div class="col-12 col-md-6"><label class="form-label">Registered Name <span class="text-muted small">(para sa invoice)</span></label><input v-model="form.registeredName" class="form-control" placeholder="BIR-registered legal name" /></div>
+          <div class="col-12 col-md-6"><label class="form-label">TIN</label><input v-model="form.tin" class="form-control" placeholder="000-000-000-000" /></div>
           <div class="col-12 col-md-6"><label class="form-label">Email</label><input v-model="form.email" type="email" class="form-control" placeholder="customer@email.com" /></div>
           <div class="col-12 col-md-6"><label class="form-label">Contact number</label><input v-model="form.contact" class="form-control" placeholder="Phone" /></div>
-          <div class="col-12 col-md-6"><label class="form-label">Address</label><input v-model="form.address" class="form-control" /></div>
+          <div class="col-12 col-md-6"><label class="form-label">Business Address</label><input v-model="form.address" class="form-control" /></div>
           <div class="col-12"><label class="form-label">Notes</label><input v-model="form.notes" class="form-control" /></div>
         </div>
 
