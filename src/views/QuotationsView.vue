@@ -56,7 +56,7 @@ async function doExport({ format, orientation, paper }){
 }
 
 // ---- Machine quotation form (existing) ----
-const form = reactive({ customer:'', date:today(), machineModel:'', quantity:1, supplierCost:0, freight:0, importation:0, bankCharges:0, delivery:0, installation:0, otherCosts:0, markupPercent:20, vatStatus:'NON_VAT', discount:0, withholding:0 });
+const form = reactive({ customer:'', date:today(), machineModel:'', quantity:1, supplierCost:0, freight:0, importation:0, bankCharges:0, delivery:0, installation:0, otherCosts:0, markupPercent:20, vatStatus:'NON_VAT', discount:0, withholding:0, discountType:'ORDINARY', saleType:'CREDIT', cashAccount:'BANK' });
 const computed_ = ref(null);
 let t;
 watch(form, () => { if(formKind.value==='MACHINE'){ clearTimeout(t); t = setTimeout(previewMachine, 250); } }, { deep:true });
@@ -64,7 +64,7 @@ async function previewMachine(){ try { const { data } = await api.post('/quotati
 
 // ---- Product quotation form (bago) ----
 const editingId = ref(null);     // kung may laman = nag-e-edit ng DRAFT na quotation
-const pform = reactive({ customer:'', date:today(), newCustomer:false, newCustomerName:'', vatStatus:'NON_VAT', discount:0, withholding:0,
+const pform = reactive({ customer:'', date:today(), newCustomer:false, newCustomerName:'', vatStatus:'NON_VAT', discount:0, withholding:0, discountType:'ORDINARY', saleType:'CREDIT', cashAccount:'BANK',
   lines: [ blankLine(), blankLine() ] });
 function blankLine(){ return { product:'', description:'', quantity:1, unitPrice:0, source:'WAREHOUSE:' }; }
 function addLine(){ pform.lines.push(blankLine()); }
@@ -131,6 +131,7 @@ async function load(){
 function resetProductForm(){
   editingId.value = null;
   pform.customer=''; pform.date=today(); pform.newCustomer=false; pform.newCustomerName=''; pform.vatStatus='NON_VAT'; pform.discount=0; pform.withholding=0;
+  pform.discountType='ORDINARY'; pform.saleType='CREDIT'; pform.cashAccount='BANK';
   pform.lines = [ blankLine(), blankLine() ];
 }
 function openForm(kind){
@@ -146,6 +147,7 @@ function editQuote(q){
   pform.customer = q.customer?._id || q.customer || ''; pform.newCustomer=false; pform.newCustomerName='';
   pform.vatStatus = q.vatStatus || 'NON_VAT'; pform.date = isoDay(q.date || q.createdAt);
   pform.discount = q.discount || 0; pform.withholding = q.withholding || 0;
+  pform.discountType = q.discountType || 'ORDINARY'; pform.saleType = q.saleType || 'CREDIT'; pform.cashAccount = q.cashAccount || 'BANK';
   pform.lines = (q.items||[]).map((it) => ({ product: it.product?._id || it.product || '', description: it.description||'', quantity: it.quantity||0, unitPrice: it.unitPrice||0, source:'WAREHOUSE:' }));
   if(!pform.lines.length) pform.lines = [ blankLine() ];
   pform.lines.forEach((l) => l.product && fetchBalances(l.product));
@@ -172,7 +174,7 @@ async function save(){
       }
       const lines = pform.lines.filter((l) => l.product || l.description).map((l) => ({ product:l.product||undefined, description:l.description, quantity:Number(l.quantity)||0, unitPrice:Number(l.unitPrice)||0 }));
       if(!lines.length){ error.value='Magdagdag man lang ng isang produkto.'; saving.value=false; return; }
-      const deductions = { discount: Number(pform.discount)||0, withholding: Number(pform.withholding)||0 };
+      const deductions = { discount: Number(pform.discount)||0, withholding: Number(pform.withholding)||0, discountType: pform.discountType, saleType: pform.saleType, cashAccount: pform.cashAccount };
       if(editingId.value){
         await api.patch(`/quotations/${editingId.value}`, { customer: customerId || undefined, date: pform.date, vatStatus: pform.vatStatus, items: lines, ...deductions });
       } else {
@@ -303,6 +305,14 @@ onMounted(load);
         ⚠ Kulang ang stock sa napiling source location para sa isa o higit pang linya (negatibo ang balance after).
       </p>
 
+      <div class="row g-2 mt-2">
+        <div class="col-6 col-md-3"><label class="form-label">Sale type</label>
+          <select v-model="pform.saleType" class="form-select form-select-sm"><option value="CREDIT">Credit Sales (A/R)</option><option value="CASH">Cash Sales</option></select></div>
+        <div v-if="pform.saleType==='CASH'" class="col-6 col-md-3"><label class="form-label">Payment method</label>
+          <select v-model="pform.cashAccount" class="form-select form-select-sm"><option value="ON_HAND">Cash on Hand</option><option value="BANK">Cash in Bank</option><option value="GCASH">Cash in GCash/E-wallet</option></select></div>
+        <div class="col-6 col-md-3"><label class="form-label">Discount type</label>
+          <select v-model="pform.discountType" class="form-select form-select-sm"><option value="ORDINARY">Ordinary Sales Discount</option><option value="SENIOR">Senior Citizen</option><option value="PWD">PWD</option></select></div>
+      </div>
       <div class="row g-2 justify-content-end mt-2">
         <div class="col-6 col-md-3"><label class="form-label">Less Discount (SC/PWD/NAAC/MOV/SP)</label>
           <input v-model.number="pform.discount" type="number" min="0" class="form-control form-control-sm numeric text-end" /></div>
@@ -343,6 +353,12 @@ onMounted(load);
             <select v-model="form.vatStatus" class="form-select"><option value="VAT">VAT</option><option value="NON_VAT">Non-VAT</option></select></div>
           <div class="col-6 col-md-4"><label class="form-label">Less Discount (SC/PWD/NAAC/MOV/SP)</label><input v-model.number="form.discount" type="number" min="0" class="form-control numeric" /></div>
           <div class="col-6 col-md-4"><label class="form-label">Less Withholding Tax</label><input v-model.number="form.withholding" type="number" min="0" class="form-control numeric" /></div>
+          <div class="col-6 col-md-4"><label class="form-label">Discount type</label>
+            <select v-model="form.discountType" class="form-select"><option value="ORDINARY">Ordinary Sales Discount</option><option value="SENIOR">Senior Citizen</option><option value="PWD">PWD</option></select></div>
+          <div class="col-6 col-md-4"><label class="form-label">Sale type</label>
+            <select v-model="form.saleType" class="form-select"><option value="CREDIT">Credit Sales (A/R)</option><option value="CASH">Cash Sales</option></select></div>
+          <div v-if="form.saleType==='CASH'" class="col-6 col-md-4"><label class="form-label">Payment method</label>
+            <select v-model="form.cashAccount" class="form-select"><option value="ON_HAND">Cash on Hand</option><option value="BANK">Cash in Bank</option><option value="GCASH">Cash in GCash/E-wallet</option></select></div>
         </div>
         <button class="btn btn-primary mt-3" :disabled="saving" @click="save">{{ saving ? 'Saving…' : 'Save quotation' }}</button>
       </div></div></div>
