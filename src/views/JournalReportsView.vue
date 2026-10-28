@@ -200,6 +200,11 @@ onMounted(async () => { await loadFilters(); await load(); });
 
 <template>
   <div class="jr">
+    <FullscreenPanel>
+      <template #bar>
+        <button class="btn btn-ghost btn-sm" @click="exportCsv" :disabled="!rows.length">⤓ Export CSV</button>
+      </template>
+      <div class="stack">
     <div class="crumb">Accounting › Journal Reports</div>
     <div class="head">
       <div>
@@ -266,11 +271,7 @@ onMounted(async () => { await loadFilters(); await load(); });
       </div>
     </div>
 
-    <!-- Table (may Fullscreen toggle) -->
-    <FullscreenPanel :title="title[0]">
-      <template #bar>
-        <button class="btn btn-ghost btn-sm" @click="exportCsv" :disabled="!rows.length">⤓ Export CSV</button>
-      </template>
+    <!-- Table -->
     <div class="card"><div class="card-body p-0" style="overflow-x:auto">
       <table class="fin-table ruled" style="min-width:1040px">
         <thead><tr>
@@ -313,6 +314,7 @@ onMounted(async () => { await loadFilters(); await load(); });
         <button class="pbtn" :disabled="page>=pages" @click="go(page+1)">›</button>
       </div>
     </div>
+      </div><!-- /.stack -->
     </FullscreenPanel>
 
     <!-- View Journal Entry modal -->
@@ -370,6 +372,7 @@ onMounted(async () => { await loadFilters(); await load(); });
 
 <style scoped>
 .jr { display:flex; flex-direction:column; gap:1rem; }
+.stack { display:flex; flex-direction:column; gap:1rem; }
 .crumb { font-size:.78rem; color:var(--muted); }
 .head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
 
