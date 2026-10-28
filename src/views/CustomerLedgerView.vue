@@ -1,4 +1,5 @@
 <script setup>
+import FullscreenPanel from '../components/FullscreenPanel.vue';
 import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtDate } from '../utils/datetime.js';
@@ -45,6 +46,8 @@ onMounted(loadCustomers);
 
 <template>
   <div>
+    <FullscreenPanel>
+      <div class="stack">
     <h3 class="mb-1">Customer Ledger</h3>
     <p class="text-muted">Statement of account per customer, o pumili ng "All" para sa Aging of Accounts Receivable.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
@@ -135,6 +138,8 @@ onMounted(loadCustomers);
 
     <ExportDialog :visible="showExport" :busy="exporting" title="Export AR Aging"
       @confirm="onExport" @close="showExport = false" />
+      </div>
+    </FullscreenPanel>
   </div>
 </template>
 

@@ -1,4 +1,5 @@
 <script setup>
+import FullscreenPanel from '../components/FullscreenPanel.vue';
 import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtTime } from '../utils/datetime.js';
@@ -111,6 +112,8 @@ onMounted(load);
 
 <template>
   <div>
+    <FullscreenPanel>
+      <div class="stack">
     <h3 class="mb-1">Sales</h3>
     <p class="text-muted">Upload the machine's daily export — all sales are recorded; unmatched ones are marked "new" to resolve.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
@@ -256,6 +259,8 @@ onMounted(load);
         </div>
       </div>
     </div>
+      </div>
+    </FullscreenPanel>
   </div>
 </template>
 
@@ -272,7 +277,8 @@ onMounted(load);
 .srec thead th.r { text-align:right; }
 .srec tbody td { padding:.5rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; overflow-wrap:anywhere; white-space:normal; }
 .srec tbody tr:last-child td { border-bottom:none; }
-.srec tbody tr:hover td { background:#FAFBFC; }
+.srec tbody tr:nth-child(even) td { background:#F6F8FB; }
+.srec tbody tr:hover td { background:var(--dawn-tint); }
 .srec .r { text-align:right; }
 .srec .amt { font-variant-numeric:tabular-nums; white-space:nowrap; }
 .srec .nowrap { white-space:nowrap; }

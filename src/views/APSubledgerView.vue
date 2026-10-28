@@ -1,4 +1,5 @@
 <script setup>
+import FullscreenPanel from '../components/FullscreenPanel.vue';
 import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtDate } from '../utils/datetime.js';
@@ -63,6 +64,8 @@ onMounted(load);
 
 <template>
   <div>
+    <FullscreenPanel>
+      <div class="stack">
     <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-1">
       <h3 class="mb-0">Accounts Payable Sub-Ledger</h3>
       <div class="d-flex gap-2">
@@ -142,6 +145,8 @@ onMounted(load);
     <ExportDialog :visible="showExport" :busy="exporting" default-orientation="portrait"
       :title="exportAll ? 'Export AP Full Detail' : exportSupplier ? 'Export AP Detail' : 'Export AP Summary'"
       @confirm="onExport" @close="showExport = false" />
+      </div>
+    </FullscreenPanel>
   </div>
 </template>
 

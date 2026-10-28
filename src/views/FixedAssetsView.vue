@@ -1,4 +1,5 @@
 <script setup>
+import FullscreenPanel from '../components/FullscreenPanel.vue';
 import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { useAuthStore } from '../stores/auth.js';
@@ -112,6 +113,8 @@ onMounted(load);
 
 <template>
   <div>
+    <FullscreenPanel>
+      <div class="stack">
     <div class="d-flex align-items-center justify-content-between mb-1">
       <h3 class="mb-0">Fixed Assets</h3>
       <button v-if="isOwner" class="btn btn-primary btn-sm" @click="showForm ? (showForm = false) : openNew()">{{ showForm ? 'Close' : '+ New asset' }}</button>
@@ -245,6 +248,8 @@ onMounted(load);
         </tbody>
       </table>
     </div></div>
+      </div>
+    </FullscreenPanel>
   </div>
 </template>
 

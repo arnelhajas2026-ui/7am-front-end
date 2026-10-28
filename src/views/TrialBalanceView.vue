@@ -1,4 +1,5 @@
 <script setup>
+import FullscreenPanel from '../components/FullscreenPanel.vue';
 import { ref, onMounted } from 'vue';
 import api from '../services/api.js';
 import { BRAND } from '../constants/brand.js';
@@ -41,6 +42,8 @@ onMounted(async () => { await loadRefs(); await load(); });
 
 <template>
   <div>
+    <FullscreenPanel>
+      <div class="stack">
     <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-1">
       <h3 class="mb-0">Trial Balance</h3>
       <div class="d-flex gap-2 no-print">
@@ -90,5 +93,7 @@ onMounted(async () => { await loadRefs(); await load(); });
         </tbody>
       </table>
     </div>
+      </div>
+    </FullscreenPanel>
   </div>
 </template>

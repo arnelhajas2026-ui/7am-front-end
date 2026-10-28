@@ -1,4 +1,5 @@
 <script setup>
+import FullscreenPanel from '../components/FullscreenPanel.vue';
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '../services/api.js';
@@ -64,6 +65,8 @@ onMounted(async ()=>{ await loadTypes(); await load(); });
 
 <template>
   <div>
+    <FullscreenPanel>
+      <div class="stack">
     <div class="d-flex align-items-center justify-content-between mb-1 flex-wrap gap-2">
       <h3 class="mb-0">Audit Trail</h3>
       <button class="btn btn-ghost btn-sm" @click="downloadCSV">⤓ CSV</button>
@@ -137,6 +140,8 @@ onMounted(async ()=>{ await loadTypes(); await load(); });
       </table>
     </div></div>
     <p class="text-muted small mt-2">{{ logs.length }} record(s) · newest first</p>
+      </div>
+    </FullscreenPanel>
   </div>
 </template>
 

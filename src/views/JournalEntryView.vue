@@ -1,4 +1,5 @@
 <script setup>
+import FullscreenPanel from '../components/FullscreenPanel.vue';
 import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtDate, fmtDateTime } from '../utils/datetime.js';
@@ -165,6 +166,8 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
 
 <template>
   <div>
+    <FullscreenPanel>
+      <div class="stack">
     <div class="d-flex align-items-center justify-content-between mb-1">
       <h3 class="mb-0">Journal Entry</h3>
       <button class="btn btn-primary btn-sm" @click="showForm ? close() : openNew()">{{ showForm ? 'Close' : '+ New entry' }}</button>
@@ -302,6 +305,8 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
 
     <ExportDialog :visible="showExport" :busy="exporting" title="Export General Journal"
       @confirm="onExport" @close="showExport=false" />
+      </div>
+    </FullscreenPanel>
   </div>
 </template>
 

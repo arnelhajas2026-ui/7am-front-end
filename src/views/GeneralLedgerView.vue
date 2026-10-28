@@ -1,4 +1,5 @@
 <script setup>
+import FullscreenPanel from '../components/FullscreenPanel.vue';
 import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtDate } from '../utils/datetime.js';
@@ -65,6 +66,8 @@ async function onExport({ format, orientation, paper }){
 
 <template>
   <div>
+    <FullscreenPanel>
+      <div class="stack">
     <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-1">
       <h3 class="mb-0">General Ledger</h3>
       <button class="btn btn-ghost btn-sm" @click="showExport=true">⤓ Export (PDF / Word / Excel)</button>
@@ -133,5 +136,7 @@ async function onExport({ format, orientation, paper }){
     <ExportDialog :visible="showExport" :busy="exporting" default-orientation="portrait"
       :title="selAccount ? 'Export General Ledger' : 'Export GL Summary'"
       @confirm="onExport" @close="showExport=false" />
+      </div>
+    </FullscreenPanel>
   </div>
 </template>

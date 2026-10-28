@@ -1,4 +1,5 @@
 <script setup>
+import FullscreenPanel from '../components/FullscreenPanel.vue';
 import { ref, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtDate } from '../utils/datetime.js';
@@ -30,6 +31,8 @@ onMounted(load);
 
 <template>
   <div>
+    <FullscreenPanel>
+      <div class="stack">
     <h3 class="mb-1">Accounting Overview</h3>
     <p class="text-muted">Buod ng financial position mula sa General Ledger<span v-if="o"> · as of {{ fmtDate(o.asOf) }}</span>.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
@@ -82,5 +85,7 @@ onMounted(load);
       </div></div>
       <p class="text-muted small mt-2">Lahat ng figures ay galing sa posted journal entries (General Ledger).</p>
     </template>
+      </div>
+    </FullscreenPanel>
   </div>
 </template>

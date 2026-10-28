@@ -309,6 +309,18 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-display); letter-spacing:-.015em; }
 .nav-group-label .chev { width:13px; height:13px; transition:transform .18s ease; flex:none; opacity:.8; }
 .nav-group-label.collapsed .chev { transform:rotate(-90deg); }
 
+/* ============================================================
+   Reusable table + layout helpers (rollout sa lahat ng table pages)
+   ============================================================ */
+/* Vertical stack para sa page sections (ginagamit sa loob ng FullscreenPanel). */
+.stack { display:flex; flex-direction:column; gap:1rem; }
+/* Alternating row highlights + hover — mas madaling sundan ang row info.
+   Hindi kasama ang structural rows ng financial statements (sec/tot/net/gp/ibt). */
+.fin-table tbody tr:nth-child(even):not(.sec):not(.tot):not(.net):not(.gp):not(.ibt) > td { background:#F6F8FB; }
+.fin-table tbody tr:hover > td { background:var(--dawn-tint); }
+/* Huwag i-zebra/hover ang print sheets. */
+.print-sheet .fin-table tbody tr > td { background:transparent !important; }
+
 /* inventory rows */
 .stock-row { display:flex; align-items:center; gap:1rem; padding:.8rem 1rem; border-bottom:1px solid var(--line); }
 .stock-row:last-child { border-bottom:none; }

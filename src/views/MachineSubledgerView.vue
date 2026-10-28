@@ -1,4 +1,5 @@
 <script setup>
+import FullscreenPanel from '../components/FullscreenPanel.vue';
 import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtDate } from '../utils/datetime.js';
@@ -25,6 +26,8 @@ onMounted(load);
 
 <template>
   <div>
+    <FullscreenPanel>
+      <div class="stack">
     <h3 class="mb-0">Vending Machine Inventory Sub-Ledger</h3>
     <p class="text-muted">Vending Machines for Resale (GL 1130) — hiwalay sa snacks/drinks (1100). In = Delivered to 7A'M, Out = Delivered to Customer.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
@@ -61,6 +64,8 @@ onMounted(load);
         <tfoot v-if="rows.length"><tr class="gp"><td class="lbl" colspan="9">Ending inventory value</td><td class="num fw-bold">{{ peso(total) }}</td></tr></tfoot>
       </table>
     </div></div>
+      </div>
+    </FullscreenPanel>
   </div>
 </template>
 
