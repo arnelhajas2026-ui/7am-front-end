@@ -21,6 +21,7 @@ export const NAV = [
   { name: 'coa',        label: 'Chart of Accounts', icon: 'book',    module: 'accounting', group: 'Accounting' },
   { name: 'costcenters',label: 'Cost Centers',      icon: 'target',  module: 'accounting', group: 'Accounting' },
   { name: 'journal',    label: 'Journal Entry',     icon: 'journal', module: 'accounting', group: 'Accounting' },
+  { name: 'journalreports', label: 'Journal Reports', icon: 'book', module: 'accounting', group: 'Accounting' },
   { name: 'generalledger', label: 'General Ledger', icon: 'ledger',  module: 'accounting', group: 'Accounting' },
   { name: 'subledgerinventory', label: 'Inventory Sub-Ledger', icon: 'layers', module: 'accounting', group: 'Accounting' },
   { name: 'subledgerap', label: 'AP Sub-Ledger', icon: 'truck',  module: 'accounting', group: 'Accounting' },

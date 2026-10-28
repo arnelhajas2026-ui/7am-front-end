@@ -19,6 +19,7 @@ import BalanceSheetView from '../views/BalanceSheetView.vue';
 import ChartOfAccountsView from '../views/ChartOfAccountsView.vue';
 import CostCentersView from '../views/CostCentersView.vue';
 import JournalEntryView from '../views/JournalEntryView.vue';
+import JournalReportsView from '../views/JournalReportsView.vue';
 import GeneralLedgerView from '../views/GeneralLedgerView.vue';
 import InventorySubledgerView from '../views/InventorySubledgerView.vue';
 import APSubledgerView from '../views/APSubledgerView.vue';
@@ -61,6 +62,7 @@ const routes = [
   { path: '/coa', name: 'coa', component: ChartOfAccountsView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/cost-centers', name: 'costcenters', component: CostCentersView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/journal', name: 'journal', component: JournalEntryView, meta: { requiresAuth: true, module: 'accounting' } },
+  { path: '/journal-reports', name: 'journalreports', component: JournalReportsView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/general-ledger', name: 'generalledger', component: GeneralLedgerView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/subledger-inventory', name: 'subledgerinventory', component: InventorySubledgerView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/subledger-ap', name: 'subledgerap', component: APSubledgerView, meta: { requiresAuth: true, module: 'accounting' } },
