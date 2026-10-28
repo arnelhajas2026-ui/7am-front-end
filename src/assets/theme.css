@@ -300,9 +300,14 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-display); letter-spacing:-.015em; }
 
 /* nav section labels (Master Data / Admin) */
 .nav-group-label {
+  display:flex; align-items:center; justify-content:space-between; gap:.5rem; width:100%;
   font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
   color:#5C6B80; padding:.9rem .8rem .3rem;
+  background:none; border:none; cursor:pointer; text-align:left;
 }
+.nav-group-label:hover { color:#AEBBCC; }
+.nav-group-label .chev { width:13px; height:13px; transition:transform .18s ease; flex:none; opacity:.8; }
+.nav-group-label.collapsed .chev { transform:rotate(-90deg); }
 
 /* inventory rows */
 .stock-row { display:flex; align-items:center; gap:1rem; padding:.8rem 1rem; border-bottom:1px solid var(--line); }

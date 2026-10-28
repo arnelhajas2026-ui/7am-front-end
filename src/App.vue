@@ -41,6 +41,17 @@ const groups = computed(() => {
 });
 
 const initial = computed(() => (auth.user?.name || '?').charAt(0).toUpperCase());
+
+// Collapsible sidebar category groups (hide/unhide), naaalala per device.
+const COLLAPSE_KEY = '7am.nav.collapsed';
+const collapsed = ref({});
+try { collapsed.value = JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '{}') || {}; } catch { collapsed.value = {}; }
+function toggleGroup(name) {
+  if (!name) return;
+  collapsed.value = { ...collapsed.value, [name]: !collapsed.value[name] };
+  try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify(collapsed.value)); } catch { /* ignore */ }
+}
+function isOpen(name) { return name ? !collapsed.value[name] : true; }
 </script>
 
 <template>
@@ -54,8 +65,11 @@ const initial = computed(() => (auth.user?.name || '?').charAt(0).toUpperCase())
       <div class="sidebar-brand"><span class="brand-dot"></span> 7A'M</div>
       <nav class="sidebar-nav">
         <template v-for="g in groups" :key="g.group || 'main'">
-          <div v-if="g.group" class="nav-group-label">{{ g.group }}</div>
-          <router-link v-for="it in g.items" :key="it.name" class="nav7" :to="{ name: it.name }">
+          <button v-if="g.group" class="nav-group-label" :class="{ collapsed: !isOpen(g.group) }" @click="toggleGroup(g.group)">
+            <span>{{ g.group }}</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <router-link v-for="it in g.items" v-show="isOpen(g.group)" :key="it.name" class="nav7" :to="{ name: it.name }">
             <Icon :name="it.icon" /> {{ it.label }}
           </router-link>
         </template>
@@ -83,8 +97,11 @@ const initial = computed(() => (auth.user?.name || '?').charAt(0).toUpperCase())
       <div class="drawer-brand"><span class="brand-dot"></span> 7A'M</div>
       <nav class="sidebar-nav flex-grow-1">
         <template v-for="g in groups" :key="g.group || 'main'">
-          <div v-if="g.group" class="nav-group-label">{{ g.group }}</div>
-          <router-link v-for="it in g.items" :key="it.name" class="nav7" :to="{ name: it.name }">
+          <button v-if="g.group" class="nav-group-label" :class="{ collapsed: !isOpen(g.group) }" @click="toggleGroup(g.group)">
+            <span>{{ g.group }}</span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <router-link v-for="it in g.items" v-show="isOpen(g.group)" :key="it.name" class="nav7" :to="{ name: it.name }">
             <Icon :name="it.icon" /> {{ it.label }}
           </router-link>
         </template>
