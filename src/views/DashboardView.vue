@@ -1,4 +1,5 @@
 <script setup>
+import FullscreenPanel from '../components/FullscreenPanel.vue';
 import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { useAuthStore } from '../stores/auth.js';
@@ -96,6 +97,7 @@ onMounted(load);
         <!-- ===== LEFT: per-machine + top/not selling ===== -->
         <div class="col-12 col-lg-8">
           <!-- Per-Machine Location Analytics -->
+          <FullscreenPanel title="Per-Machine Location Analytics">
           <div class="card mb-3"><div class="card-body">
             <p class="section-eyebrow mb-2">Per-Machine Location Analytics</p>
             <div class="pm-scroll">
@@ -131,6 +133,7 @@ onMounted(load);
             </div>
             <div class="muted xs mt-1">“Last → Now” = pagbabago ng benta ngayong buwan kumpara noong nakaraang buwan.</div>
           </div></div>
+          </FullscreenPanel>
 
           <!-- Top Selling / Not Selling -->
           <div class="row g-3">
@@ -280,9 +283,11 @@ onMounted(load);
 
 <style scoped>
 .kpi-band { font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-2); margin:0 0 .4rem; }
-.tile { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:.8rem .9rem; box-shadow:var(--shadow-sm); height:100%; }
+.tile { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:.8rem .9rem; box-shadow:var(--shadow-sm); height:100%; container-type:inline-size; }
 .tile .tlabel { font-size:.66rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); }
-.tile .tval { font-family:var(--font-display); font-weight:700; font-size:1.2rem; margin-top:.2rem; }
+.tile .tval { font-family:var(--font-display); font-weight:700; margin-top:.2rem;
+  font-size:clamp(0.85rem, 13cqi, 1.2rem); letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 .tile .tval.neg { color:var(--bad); }
 .tile .tsub { font-size:.62rem; color:var(--muted); margin-top:1px; }
 
@@ -293,7 +298,8 @@ onMounted(load);
 .pm-table thead th.r { text-align:right; }
 .pm-table tbody td { padding:.5rem .6rem; border-bottom:1px solid var(--line); vertical-align:middle; }
 .pm-table tbody td.r { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.pm-table tbody tr:hover td { background:#FAFBFC; }
+.pm-table tbody tr:nth-child(even) td { background:#F6F8FB; }
+.pm-table tbody tr:hover td { background:var(--dawn-tint); }
 .spark { display:block; }
 .muted { color:var(--muted); } .xs { font-size:.72rem; }
 .neg { color:var(--bad); }
