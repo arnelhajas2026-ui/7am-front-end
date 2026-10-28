@@ -40,10 +40,12 @@ function monthRange() {
   return { start: isoLocal(new Date(now.getFullYear(), now.getMonth(), 1)),
            end: isoLocal(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
 }
-const f = reactive({ ...monthRange(), costCenter: '', account: '', paymentMethod: '', status: 'POSTED', source: '' });
+const f = reactive({ ...monthRange(), costCenter: '', account: '', customer: '', supplier: '', paymentMethod: '', status: 'POSTED', source: '' });
 
 const costCenters = ref([]);
 const accounts = ref([]);
+const customers = ref([]);
+const suppliers = ref([]);
 const SOURCES = ['Sales', 'Purchases', 'Cash Receipts', 'Cash Disbursements', 'Inventory', 'Manual Journal'];
 const METHODS = ['Cash', 'Bank Transfer', 'GCash'];
 
@@ -77,7 +79,7 @@ const COLS = {
   ],
   SJ: [
     { k: 'date', h: 'Date', t: 'date' }, { k: 'ref', h: 'Invoice No.' },
-    { k: 'memo', h: 'Customer' }, { k: 'txnType', h: 'Description' },
+    { k: 'party', h: 'Customer' }, { k: 'txnType', h: 'Description' },
     { k: 'salesAmount', h: 'Sales Amount', t: 'money' }, { k: 'discount', h: 'Discount', t: 'money' },
     { k: 'withholding', h: 'Withholding Tax', t: 'money' }, { k: 'arAmount', h: 'A/R Amount', t: 'money' },
     { k: 'costCenter', h: 'Cost Center', t: 'cc' }, { k: 'status', h: 'Status', t: 'status' },
@@ -85,7 +87,7 @@ const COLS = {
   ],
   PJ: [
     { k: 'date', h: 'Date', t: 'date' }, { k: 'ref', h: 'Supplier Invoice No.' },
-    { k: 'memo', h: 'Supplier' }, { k: 'txnType', h: 'Description' },
+    { k: 'party', h: 'Supplier' }, { k: 'txnType', h: 'Description' },
     { k: 'purchaseAmount', h: 'Purchase Amount', t: 'money' }, { k: 'discount', h: 'Discount', t: 'money' },
     { k: 'apAmount', h: 'A/P Amount', t: 'money' }, { k: 'costCenter', h: 'Cost Center', t: 'cc' },
     { k: 'status', h: 'Status', t: 'status' }, { k: '_view', h: '', t: 'view' },
@@ -123,15 +125,20 @@ function cellValue(row, c) {
   if (c.t === 'date') return row.date ? fmtDate(row.date) : '—';
   if (c.t === 'cc') return ccName(row[c.k]);
   if (c.t === 'money') return peso(row[c.k]);
+  if (c.k === 'party') return row.party || row.memo || '—';   // Customer/Supplier, fallback sa memo
   const v = row[c.k];
   return (v === '' || v == null) ? '—' : v;
 }
 
 async function loadFilters() {
   try {
-    const [cc, ac] = await Promise.all([api.get('/cost-centers'), api.get('/accounts-coa')]);
+    const [cc, ac, cu, su] = await Promise.all([
+      api.get('/cost-centers'), api.get('/accounts-coa'), api.get('/customers'), api.get('/suppliers'),
+    ]);
     costCenters.value = (cc.data.costCenters || []).filter((c) => c.active !== false);
     accounts.value = (ac.data.accounts || []).filter((a) => !a.isHeader);
+    customers.value = cu.data.customers || [];
+    suppliers.value = su.data.suppliers || [];
   } catch { /* huwag i-block ang page kung pumalya ang dropdown data */ }
 }
 
@@ -142,6 +149,7 @@ async function load(resetPage = false) {
     const params = {
       journal: journal.value, start: f.start, end: f.end,
       costCenter: f.costCenter || undefined, account: f.account || undefined,
+      customer: f.customer || undefined, supplier: f.supplier || undefined,
       paymentMethod: f.paymentMethod || undefined, status: f.status || undefined,
       source: f.source || undefined, page: page.value, limit: 25,
     };
@@ -155,9 +163,15 @@ async function load(resetPage = false) {
   } finally { loading.value = false; }
 }
 
-function selectTab(key) { if (key === journal.value) return; journal.value = key; load(true); }
+function selectTab(key) {
+  if (key === journal.value) return;
+  journal.value = key;
+  // Linisin ang journal-specific na filter (Account/Customer/Supplier) para walang stale na naka-hide.
+  f.account = ''; f.customer = ''; f.supplier = '';
+  load(true);
+}
 function apply() { load(true); }
-function reset() { Object.assign(f, { ...monthRange(), costCenter: '', account: '', paymentMethod: '', status: 'POSTED', source: '' }); load(true); }
+function reset() { Object.assign(f, { ...monthRange(), costCenter: '', account: '', customer: '', supplier: '', paymentMethod: '', status: 'POSTED', source: '' }); load(true); }
 function go(p) { if (p < 1 || p > pages.value) return; page.value = p; load(); }
 
 const shownFrom = computed(() => (total.value ? (page.value - 1) * 25 + 1 : 0));
@@ -229,7 +243,19 @@ onMounted(async () => { await loadFilters(); await load(); });
             <option v-for="c in costCenters" :key="c.code" :value="c.code">{{ c.code }} — {{ c.name }}</option>
           </select>
         </div>
-        <div><label class="form-label">Account</label>
+        <div v-if="journal==='SJ'"><label class="form-label">Customer</label>
+          <select class="form-select" v-model="f.customer">
+            <option value="">All Customers</option>
+            <option v-for="c in customers" :key="c._id" :value="c._id">{{ c.name }}</option>
+          </select>
+        </div>
+        <div v-else-if="journal==='PJ'"><label class="form-label">Supplier</label>
+          <select class="form-select" v-model="f.supplier">
+            <option value="">All Suppliers</option>
+            <option v-for="s in suppliers" :key="s._id" :value="s._id">{{ s.name }}</option>
+          </select>
+        </div>
+        <div v-else><label class="form-label">Account</label>
           <select class="form-select" v-model="f.account">
             <option value="">All Accounts</option>
             <option v-for="a in accounts" :key="a.code" :value="a.code">{{ a.code }} — {{ a.name }}</option>
