@@ -73,4 +73,12 @@ onUnmounted(() => {
 .fp-body { flex:1; overflow:auto; padding:1rem 1.1rem; }
 /* Sa fullscreen, hayaang mag-stretch ang mga table sa buong lapad */
 .fp-body :deep(table) { width:100%; }
+/* Alisin ang sariling scroll ng table card para ang fp-body ang mag-scroll —
+   kailangan para gumana ang sticky header (override ang inline overflow-x). */
+.fp-body :deep(.card-body) { overflow:visible !important; }
+/* Sticky column headers — mananatili sa taas habang nag-scroll, sa ilalim mismo ng top bar */
+.fp-body :deep(thead th) {
+  position:sticky; top:0; z-index:5; background:var(--surface);
+  box-shadow:0 2px 4px rgba(15,28,46,.08);
+}
 </style>

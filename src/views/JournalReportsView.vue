@@ -374,6 +374,10 @@ onMounted(async () => { await loadFilters(); await load(); });
 .jr { display:flex; flex-direction:column; gap:1rem; }
 .stack { display:flex; flex-direction:column; gap:1rem; }
 .crumb { font-size:.78rem; color:var(--muted); }
+
+/* Alternating row highlights — mas madaling sundan ang row info */
+.fin-table tbody tr:nth-child(even) td { background:#F6F8FB; }
+.fin-table tbody tr:hover td { background:var(--dawn-tint); }
 .head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
 
 /* Tabs — underline style sa dawn accent */
