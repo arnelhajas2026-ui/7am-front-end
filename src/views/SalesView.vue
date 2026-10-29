@@ -107,6 +107,53 @@ async function doResolve(productId){
 }
 
 const peso = (n)=> '₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2});
+
+// Invoice label para sa isang product-group: iisa → ipakita; marami → "N invoices".
+function invLabel(g){
+  const set = new Set((g.items||[]).map(s=> s.invoiceNo).filter(Boolean));
+  if(set.size===0) return '—';
+  if(set.size===1) return [...set][0];
+  return `${set.size} invoices`;
+}
+
+const esc = (s)=> String(s==null?'':s).replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// I-print ang invoice(s) ng isang group. Naka-group ang mga item ayon sa Invoice #
+// (parehong oras = isang bayaran = isang invoice). Bubukas sa bagong window para i-print.
+function printInvoice(g){
+  const byInv = {};
+  for(const s of (g.items||[])){ const k = s.invoiceNo || '—'; (byInv[k] ||= []).push(s); }
+  const blocks = Object.entries(byInv).map(([inv, items])=>{
+    const m = items[0];
+    const machineName = m.machine?.locationName || m.machine?.machineId || '—';
+    const when = m.soldAt ? new Date(m.soldAt).toLocaleString('en-PH',{ timeZone:'Asia/Manila' }) : '—';
+    const total = items.reduce((s,x)=> s + Number(x.amount||0), 0);
+    const rows = items.map(x=> `<tr><td>${esc(x.product?.name || x.productNameRaw || '—')}</td><td>${esc(x.channel||'—')}</td><td class="r">${peso(x.amount)}</td></tr>`).join('');
+    return `<div class="inv">
+      <h2>7A'M Vending — Sales Invoice</h2>
+      <div class="meta"><span>Invoice #: <b>${esc(inv)}</b></span><span>${esc(machineName)}</span><span>${esc(when)}</span></div>
+      <table><thead><tr><th>Product</th><th>Goods Channel</th><th class="r">Amount</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr><td colspan="2" class="r"><b>Total</b></td><td class="r"><b>${peso(total)}</b></td></tr></tfoot></table>
+    </div>`;
+  }).join('');
+  const w = window.open('', '_blank', 'width=560,height=680');
+  if(!w){ error.value = 'Payagan ang pop-up para ma-print ang invoice.'; return; }
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Vending Invoice</title><style>
+    body{font-family:system-ui,-apple-system,sans-serif;padding:16px;color:#1d1a15}
+    .inv{border:1px solid #cfd6e0;border-radius:10px;padding:16px;margin-bottom:14px}
+    h2{font-size:1.05rem;margin:0 0 10px}
+    .meta{display:flex;flex-direction:column;gap:2px;font-size:.82rem;color:#555;margin-bottom:10px}
+    table{width:100%;border-collapse:collapse;font-size:.86rem}
+    th,td{padding:5px 7px;border-bottom:1px solid #eef1f5;text-align:left}
+    .r{text-align:right}
+    tfoot td{border-top:2px solid #333;border-bottom:none}
+    @media print{.noprint{display:none}}
+  </style></head><body>${blocks}
+    <button class="noprint" onclick="window.print()" style="margin-top:8px;padding:7px 14px;border:1px solid #333;border-radius:8px;background:#fff;cursor:pointer">🖶 Print</button>
+  </body></html>`);
+  w.document.close(); w.focus();
+}
 onMounted(load);
 </script>
 
@@ -177,7 +224,7 @@ onMounted(load);
     <div v-else class="card"><div class="card-body p-0" style="overflow-x:auto">
       <table class="srec">
         <thead>
-          <tr><th>Product Name</th><th>Status</th><th class="nowrap">Time</th><th>Machine Name</th><th>Goods Channel</th><th class="r nowrap">Qty</th><th class="r nowrap">Amount</th></tr>
+          <tr><th>Product Name</th><th>Status</th><th class="nowrap">Time</th><th>Machine Name</th><th>Goods Channel</th><th class="r nowrap">Qty</th><th class="r nowrap">Amount</th><th class="nowrap">Invoice #</th><th></th></tr>
         </thead>
         <tbody>
           <tr v-for="g in grouped" :key="g.key">
@@ -194,6 +241,8 @@ onMounted(load);
             <td class="muted">{{ g.qty>1 ? '—' : (g.items[0].channel || '—') }}</td>
             <td class="r nowrap">{{ g.qty }}</td>
             <td class="r amt">{{ peso(g.amount) }}</td>
+            <td class="nowrap muted">{{ invLabel(g) }}</td>
+            <td><button class="btn-print" title="Print invoice" @click.stop="printInvoice(g)">🖶 Print</button></td>
           </tr>
         </tbody>
       </table>
@@ -222,10 +271,11 @@ onMounted(load);
         </div>
         <div style="overflow-x:auto">
           <table class="srec detail">
-            <thead><tr><th class="nowrap">Time</th><th>Goods Channel</th><th class="r nowrap">Amount</th></tr></thead>
+            <thead><tr><th class="nowrap">Time</th><th class="nowrap">Invoice #</th><th>Goods Channel</th><th class="r nowrap">Amount</th></tr></thead>
             <tbody>
               <tr v-for="s in detailItems" :key="s._id">
                 <td class="nowrap">{{ fmtTime(s.soldAt) }}</td>
+                <td class="nowrap muted">{{ s.invoiceNo || '—' }}</td>
                 <td>{{ s.channel || '—' }}</td>
                 <td class="r amt">{{ peso(s.amount) }}</td>
               </tr>
@@ -290,6 +340,9 @@ onMounted(load);
 .badge-ok { font-size:.7rem; font-weight:700; padding:.15rem .5rem; border-radius:999px; background:#E5F6EC; color:var(--good); }
 .badge-new { font-size:.7rem; font-weight:700; padding:.15rem .5rem; border-radius:999px; background:#FDECEC; color:var(--bad); border:1px solid #F3C7C7; cursor:pointer; }
 .badge-new:hover { background:var(--bad); color:#fff; }
+
+.btn-print { border:1px solid var(--line); background:var(--surface); color:var(--ink-2); font-size:.72rem; font-weight:600; padding:.2rem .5rem; border-radius:6px; cursor:pointer; white-space:nowrap; }
+.btn-print:hover { border-color:var(--dawn-deep); color:var(--dawn-deep); }
 
 .srec-modal { position:fixed; inset:0; z-index:1100; background:rgba(15,28,46,.45); display:flex; align-items:center; justify-content:center; padding:14px; }
 .srec-modal-card { background:#fff; border-radius:16px; box-shadow:var(--shadow-md); width:100%; max-width:520px; max-height:85vh; overflow:auto; padding:18px; }
