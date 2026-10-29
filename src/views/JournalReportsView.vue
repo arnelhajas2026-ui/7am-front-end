@@ -40,7 +40,7 @@ function monthRange() {
   return { start: isoLocal(new Date(now.getFullYear(), now.getMonth(), 1)),
            end: isoLocal(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
 }
-const f = reactive({ ...monthRange(), costCenter: '', account: '', customer: '', supplier: '', paymentMethod: '', status: 'POSTED', source: '' });
+const f = reactive({ ...monthRange(), costCenter: '', account: '', customer: '', supplier: '', paymentMethod: '', status: 'POSTED', source: '', reference: '' });
 
 const costCenters = ref([]);
 const accounts = ref([]);
@@ -151,7 +151,7 @@ async function load(resetPage = false) {
       costCenter: f.costCenter || undefined, account: f.account || undefined,
       customer: f.customer || undefined, supplier: f.supplier || undefined,
       paymentMethod: f.paymentMethod || undefined, status: f.status || undefined,
-      source: f.source || undefined, page: page.value, limit: 25,
+      source: f.source || undefined, reference: f.reference || undefined, page: page.value, limit: 25,
     };
     const { data } = await api.get('/journal/reports', { params });
     rows.value = data.rows || [];
@@ -171,7 +171,7 @@ function selectTab(key) {
   load(true);
 }
 function apply() { load(true); }
-function reset() { Object.assign(f, { ...monthRange(), costCenter: '', account: '', customer: '', supplier: '', paymentMethod: '', status: 'POSTED', source: '' }); load(true); }
+function reset() { Object.assign(f, { ...monthRange(), costCenter: '', account: '', customer: '', supplier: '', paymentMethod: '', status: 'POSTED', source: '', reference: '' }); load(true); }
 function go(p) { if (p < 1 || p > pages.value) return; page.value = p; load(); }
 
 const shownFrom = computed(() => (total.value ? (page.value - 1) * 25 + 1 : 0));
@@ -279,6 +279,9 @@ onMounted(async () => { await loadFilters(); await load(); });
             <option value="">All Sources</option>
             <option v-for="s in SOURCES" :key="s" :value="s">{{ s }}</option>
           </select>
+        </div>
+        <div><label class="form-label">Reference #</label>
+          <input class="form-control" v-model="f.reference" placeholder="Invoice / ref…" @keyup.enter="apply">
         </div>
         <div class="fbtns">
           <button class="btn btn-ink" @click="apply">🔍 Apply Filters</button>

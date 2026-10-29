@@ -181,6 +181,7 @@ async function save(){
         await api.post('/quotations', { kind:'PRODUCT', customer: customerId || undefined, date: pform.date, vatStatus: pform.vatStatus, items: lines, ...deductions });
       }
     } else {
+      if(!(Number(form.supplierCost) > 0)){ error.value = 'Kailangan ang Supplier Cost (hindi pwedeng 0 o blangko).'; saving.value=false; return; }
       await api.post('/quotations', { kind:'MACHINE', ...form });
     }
     showForm.value=false; editingId.value=null; await load();
@@ -341,7 +342,7 @@ onMounted(load);
             <input v-model="form.date" type="date" class="form-control" /></div>
           <div class="col-6 col-md-3"><label class="form-label">Machine model</label><input v-model="form.machineModel" class="form-control" /></div>
           <div class="col-4 col-md-2"><label class="form-label">Qty</label><input v-model.number="form.quantity" type="number" class="form-control numeric" /></div>
-          <div class="col-6 col-md-4"><label class="form-label">Supplier cost</label><input v-model.number="form.supplierCost" type="number" class="form-control numeric" /></div>
+          <div class="col-6 col-md-4"><label class="form-label">Supplier cost <span class="text-danger">*</span></label><input v-model.number="form.supplierCost" type="number" class="form-control numeric" :class="{ 'is-invalid': !(Number(form.supplierCost) > 0) }" /></div>
           <div class="col-6 col-md-4"><label class="form-label">Freight</label><input v-model.number="form.freight" type="number" class="form-control numeric" /></div>
           <div class="col-6 col-md-4"><label class="form-label">Importation</label><input v-model.number="form.importation" type="number" class="form-control numeric" /></div>
           <div class="col-6 col-md-4"><label class="form-label">Bank charges</label><input v-model.number="form.bankCharges" type="number" class="form-control numeric" /></div>

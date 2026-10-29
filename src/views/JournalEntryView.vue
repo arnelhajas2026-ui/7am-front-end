@@ -24,6 +24,7 @@ const detail = ref(null);
 const fStart = ref('');
 const fEnd = ref('');
 const fSource = ref('');
+const fRef = ref('');
 const showExport = ref(false);
 const exporting = ref(false);
 
@@ -64,7 +65,10 @@ function srcLabel(e){ const t = e?.source?.type; return isManual(e) ? 'Manual' :
 function isParked(e){ return e?.status === 'PARKED'; }
 
 const SOURCE_TYPES = ['MANUAL','SALES_BATCH','SALES_COGS','PURCHASE','PURCHASE_PAYMENT','EXPENSE','SALES_ORDER','CUSTOMER_PAYMENT','SUPPLIER_PAYMENT','INV_ADJUST','DEPRECIATION','ASSET_DISPOSAL','OPENING_BALANCE'];
-const shownEntries = computed(()=> entries.value.filter(e => !fSource.value || (e.source?.type || 'MANUAL') === fSource.value));
+const shownEntries = computed(()=> entries.value.filter(e =>
+  (!fSource.value || (e.source?.type || 'MANUAL') === fSource.value) &&
+  (!fRef.value || String(e.referenceNo||'').toLowerCase().includes(fRef.value.trim().toLowerCase()))
+));
 
 function setCurrentMonth(){
   const [y,m] = todayPH().split('-');
@@ -270,9 +274,10 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
     <div class="row g-2 my-2">
       <div class="col-6 col-md-3"><label class="form-label mb-0 small text-muted">From</label><input v-model="fStart" type="date" class="form-control form-control-sm" @change="load" /></div>
       <div class="col-6 col-md-3"><label class="form-label mb-0 small text-muted">To</label><input v-model="fEnd" type="date" class="form-control form-control-sm" @change="load" /></div>
-      <div class="col-12 col-md-4"><label class="form-label mb-0 small text-muted">Source</label><select v-model="fSource" class="form-select form-select-sm">
+      <div class="col-6 col-md-3"><label class="form-label mb-0 small text-muted">Source</label><select v-model="fSource" class="form-select form-select-sm">
         <option value="">All sources</option>
         <option v-for="s in SOURCE_TYPES" :key="s" :value="s">{{ s === 'MANUAL' ? 'Manual' : (SRC[s] || s) }}</option></select></div>
+      <div class="col-6 col-md-3"><label class="form-label mb-0 small text-muted">Reference #</label><input v-model="fRef" class="form-control form-control-sm" placeholder="Invoice / ref…" /></div>
     </div>
     <div v-if="loading" class="text-muted">Loading…</div>
     <div v-else-if="!shownEntries.length" class="card"><div class="card-body text-muted text-center py-4">Walang journal entry sa filter na ito.</div></div>

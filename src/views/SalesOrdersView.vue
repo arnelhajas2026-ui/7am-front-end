@@ -210,10 +210,12 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
       <template v-if="selected.balance>0">
         <p class="section-eyebrow mb-2">Record customer payment</p>
         <div class="row g-2 align-items-end">
-          <div class="col-4"><label class="form-label">Amount</label><input v-model.number="pay.amount" type="number" class="form-control numeric" /></div>
-          <div class="col-4"><label class="form-label">Type</label>
+          <div class="col-6 col-md-3"><label class="form-label">Amount</label><input v-model.number="pay.amount" type="number" class="form-control numeric" /></div>
+          <div class="col-6 col-md-3"><label class="form-label">Type</label>
             <select v-model="pay.type" class="form-select" @change="onPayTypeChange"><option value="DOWN">Down</option><option value="PARTIAL">Partial</option><option value="FULL">Full</option></select></div>
-          <div class="col-4"><button class="btn btn-primary w-100" :disabled="busy" @click="recordPayment">Record</button></div>
+          <div class="col-8 col-md-4"><label class="form-label">Reference / Bank receipt #</label>
+            <input v-model="pay.reference" class="form-control" placeholder="Bank / platform receipt #" /></div>
+          <div class="col-4 col-md-2"><button class="btn btn-primary w-100" :disabled="busy" @click="recordPayment">Record</button></div>
         </div>
       </template>
       <template v-else>
