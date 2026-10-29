@@ -4,6 +4,7 @@ import api from '../services/api.js';
 import ExportDialog from '../components/ExportDialog.vue';
 import { downloadFromApi } from '../utils/exporters.js';
 import { fmtDate } from '../utils/datetime.js';
+import AttachmentLinks from '../components/AttachmentLinks.vue';
 
 const orders = ref([]);
 const suppliers = ref([]);
@@ -72,6 +73,14 @@ async function open(o){
   } catch(e){ error.value = e.response?.data?.message || 'Could not open order.'; }
 }
 function close(){ selected.value=null; }
+const savingAtts = ref(false);
+async function saveAtts(){
+  if(!selected.value) return;
+  savingAtts.value = true;
+  try { const { data } = await api.patch(`/sales-orders/${selected.value._id}/attachments`, { attachments: selected.value.attachments || [] }); selected.value = data.order; }
+  catch(e){ error.value = e.response?.data?.message || 'Could not save attachments.'; }
+  finally { savingAtts.value = false; }
+}
 
 // Awtomatikong itakda ang amount ayon sa napiling type (iwas sa "Full pero Partial" na bug).
 function onPayTypeChange(){
@@ -169,6 +178,14 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
 
       <div class="mb-3"><span class="pill" :class="statusClass(selected.status)">{{ selected.status }}</span>
         <span v-if="selected.invoiceNumber" class="pill ok ms-1">{{ selected.invoiceNumber }}</span></div>
+
+      <div class="mb-3">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <label class="form-label mb-0">Attachments (deposit / wire transfer links)</label>
+          <button class="btn btn-ghost btn-sm" :disabled="savingAtts" @click="saveAtts">{{ savingAtts ? 'Saving…' : 'Save attachments' }}</button>
+        </div>
+        <AttachmentLinks :model-value="selected.attachments || []" @update:model-value="v => selected.attachments = v" />
+      </div>
 
       <!-- ===== Terms: Target installation date + optional delay charge (machine orders) ===== -->
       <template v-if="selected.kind!=='PRODUCT'">
@@ -295,7 +312,8 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
       <div class="flex-grow-1">
         <div class="fw-semibold" style="font-family:var(--font-display)">{{ o.orderNumber }}
           <span class="badge7 ms-1" :class="o.kind==='PRODUCT' ? 'emp' : 'owner'">{{ o.kind==='PRODUCT' ? 'PRODUCT' : 'MACHINE' }}</span>
-          <span class="text-muted small ms-1">{{ o.customer?.name }}</span></div>
+          <span class="text-muted small ms-1">{{ o.customer?.name }}</span>
+          <span v-if="o.attachments?.length" class="ms-1" title="May attachment">📎</span></div>
         <div class="text-muted small">{{ o.kind==='PRODUCT' ? 'Product order' : o.machineModel }} · Balance {{ peso(o.balance) }}</div>
       </div>
       <span class="pill" :class="statusClass(o.status)">{{ o.status }}</span>

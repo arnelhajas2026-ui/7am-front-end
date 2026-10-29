@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtDate } from '../utils/datetime.js';
+import AttachmentLinks from '../components/AttachmentLinks.vue';
 
 const purchases = ref([]);
 const suppliers = ref([]);
@@ -13,7 +14,7 @@ const saving = ref(false);
 
 const today = () => new Date().toISOString().slice(0,10);
 const plus30 = (d) => { const x = new Date(d||Date.now()); x.setDate(x.getDate()+30); return x.toISOString().slice(0,10); };
-const form = ref({ supplier:'', reference:'', date:today(), dueDate:plus30(today()), paymentMethod:'CREDIT', items:[] });
+const form = ref({ supplier:'', reference:'', date:today(), dueDate:plus30(today()), paymentMethod:'CREDIT', items:[], attachments:[] });
 // Kapag binago ang Date at walang manual na Due Date pa, i-default sa +30 araw (editable pa rin).
 function onDateChange(){ if(form.value.date) form.value.dueDate = plus30(form.value.date); }
 
@@ -36,7 +37,7 @@ async function runImport(){
 
 function addItem(){ form.value.items.push({ product:'', quantity:1, unitCost:0 }); }
 function removeItem(i){ form.value.items.splice(i,1); }
-function reset(){ form.value = { supplier:'', reference:'', date:today(), dueDate:plus30(today()), paymentMethod:'CREDIT', items:[] }; showForm.value=false; }
+function reset(){ form.value = { supplier:'', reference:'', date:today(), dueDate:plus30(today()), paymentMethod:'CREDIT', items:[], attachments:[] }; showForm.value=false; }
 const total = computed(()=> form.value.items.reduce((s,i)=> s + Number(i.quantity||0)*Number(i.unitCost||0), 0));
 const peso = (n)=> '₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2, maximumFractionDigits:2});
 const balOf = (p)=> Number(p.total||0) - Number(p.amountPaid||0);
@@ -64,6 +65,14 @@ const pay = ref({ amount:0 });
 const settling = ref(false);
 function viewPurchase(p){ selected.value = p; pay.value = { amount: balOf(p) }; window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function closeView(){ selected.value = null; }
+const savingAtts = ref(false);
+async function saveAtts(){
+  if(!selected.value) return;
+  savingAtts.value = true;
+  try { const { data } = await api.patch(`/purchases/${selected.value._id}/attachments`, { attachments: selected.value.attachments || [] }); selected.value = data.purchase; await load(); }
+  catch(e){ error.value = e.response?.data?.message || 'Could not save attachments.'; }
+  finally { savingAtts.value = false; }
+}
 const lineTotal = (it)=> Number(it.quantity||0) * Number(it.unitCost||0);
 
 async function settle(){
@@ -133,6 +142,14 @@ onMounted(load);
         </tbody>
       </table>
 
+      <div class="mb-3">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <label class="form-label mb-0">Attachments (links)</label>
+          <button class="btn btn-ghost btn-sm" :disabled="savingAtts" @click="saveAtts">{{ savingAtts ? 'Saving…' : 'Save attachments' }}</button>
+        </div>
+        <AttachmentLinks :model-value="selected.attachments || []" @update:model-value="v => selected.attachments = v" />
+      </div>
+
       <!-- Payment status -->
       <div class="row g-2 mb-2">
         <div class="col-4"><div class="tile sm"><div class="tlabel">Method</div><div class="tval" style="font-size:1rem">{{ methodLabel(selected.paymentMethod) }}</div></div></div>
@@ -186,6 +203,10 @@ onMounted(load);
         <div class="col-1"><button class="btn btn-ghost btn-sm w-100" @click="removeItem(i)">×</button></div>
       </div>
 
+      <div class="mt-3 mb-2">
+        <label class="form-label">Attachments (links)</label>
+        <AttachmentLinks v-model="form.attachments" />
+      </div>
       <div class="d-flex justify-content-between align-items-center mt-3">
         <span class="fw-semibold">Total: {{ peso(total) }}</span>
         <button class="btn btn-primary" :disabled="saving" @click="save">{{ saving ? 'Saving…' : 'Record purchase' }}</button>
@@ -198,7 +219,8 @@ onMounted(load);
     <div v-for="p in purchases" :key="p._id" class="card mb-2" style="cursor:pointer" @click="viewPurchase(p)"><div class="card-body">
       <div class="d-flex justify-content-between align-items-center">
         <div><div class="fw-semibold" style="font-family:var(--font-display)">{{ p.supplier?.name || 'No supplier' }}
-          <span class="text-muted small ms-1">{{ p.reference }}</span></div>
+          <span class="text-muted small ms-1">{{ p.reference }}</span>
+          <span v-if="p.attachments?.length" class="ms-1" title="May attachment">📎</span></div>
           <div class="text-muted small">{{ fmtDate(p.date) }} · {{ p.items.length }} item<span v-if="p.items.length>1">s</span> · {{ methodLabel(p.paymentMethod) }}</div></div>
         <div class="text-end">
           <div class="fw-bold numeric">{{ peso(p.total) }}</div>
