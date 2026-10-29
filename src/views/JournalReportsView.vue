@@ -3,6 +3,7 @@ import { ref, computed, reactive, onMounted, watch } from 'vue';
 import api from '../services/api.js';
 import { fmtDate } from '../utils/datetime.js';
 import FullscreenPanel from '../components/FullscreenPanel.vue';
+import AttachmentLinks from '../components/AttachmentLinks.vue';
 
 // ---- Journals (ang tab ang nagde-determine ng libro) ----
 const TABS = [
@@ -393,6 +394,10 @@ onMounted(async () => { await loadFilters(); await load(); });
               <td class="num">{{ peso(modal.entry.totalCredit) }}</td>
             </tr></tfoot>
           </table>
+          <div v-if="(modal.entry.attachments||[]).length" class="mt-2">
+            <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.03em">Attachments</div>
+            <AttachmentLinks :model-value="modal.entry.attachments" readonly />
+          </div>
           <p class="text-muted mt-2" style="font-size:.78rem">
             Ang report na ito ay basa lang — hindi ito gumagawa ng bagong accounting entry.
           </p>

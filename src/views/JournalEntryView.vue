@@ -6,6 +6,7 @@ import { fmtDate, fmtDateTime } from '../utils/datetime.js';
 import { useAuthStore } from '../stores/auth.js';
 import { downloadFromApi } from '../utils/exporters.js';
 import AccountSelect from '../components/AccountSelect.vue';
+import AttachmentLinks from '../components/AttachmentLinks.vue';
 import ExportDialog from '../components/ExportDialog.vue';
 
 const auth = useAuthStore();
@@ -36,7 +37,7 @@ function todayPH(){ return new Date().toLocaleDateString('en-CA', { timeZone:'As
 function isoDatePH(d){ return new Date(d).toLocaleDateString('en-CA', { timeZone:'Asia/Manila' }); }
 
 function blankLine(){ return { accountCode:'', costCenter:'', machine:'', debit:0, credit:0, description:'' }; }
-const form = ref({ date: todayPH(), reference:'', memo:'', lines:[ blankLine(), blankLine() ] });
+const form = ref({ date: todayPH(), reference:'', memo:'', attachments:[], lines:[ blankLine(), blankLine() ] });
 
 function addLine(){ form.value.lines.push(blankLine()); }
 function removeLine(i){ form.value.lines.splice(i,1); }
@@ -94,10 +95,11 @@ function cleanLines(){
       debit:Number(l.debit)||0, credit:Number(l.credit)||0, description:l.description||'' }));
 }
 
-function openNew(){ form.value = { date: todayPH(), reference:'', memo:'', lines:[ blankLine(), blankLine() ] }; editingId.value=null; editingStatus.value=''; showForm.value=true; detail.value=null; window.scrollTo({top:0,behavior:'smooth'}); }
+function openNew(){ form.value = { date: todayPH(), reference:'', memo:'', attachments:[], lines:[ blankLine(), blankLine() ] }; editingId.value=null; editingStatus.value=''; showForm.value=true; detail.value=null; window.scrollTo({top:0,behavior:'smooth'}); }
 function openEdit(e){
   form.value = {
     date: isoDatePH(e.date), reference: e.referenceNo || '', memo: e.memo || '',
+    attachments: (e.attachments||[]).map(a=>({ label:a.label||'', url:a.url||'' })),
     lines: e.lines.map(l=>({ accountCode: l.accountCode, costCenter: l.costCenter||'',
       machine: l.machine?._id || l.machine || '', debit: l.debit||0, credit: l.credit||0, description: l.description||'' })),
   };
@@ -113,7 +115,7 @@ async function save(){
   if(!balanced.value){ error.value = 'Hindi balanse — dapat pantay ang Debit at Credit, at hindi zero.'; return; }
   saving.value=true; error.value='';
   try {
-    const payload = { date: form.value.date, reference: form.value.reference, memo: form.value.memo, lines: cleanLines() };
+    const payload = { date: form.value.date, reference: form.value.reference, memo: form.value.memo, attachments: form.value.attachments, lines: cleanLines() };
     if(editingId.value && editingStatus.value==='POSTED') await api.patch(`/journal/${editingId.value}`, payload);
     else if(editingId.value && editingStatus.value==='PARKED') await api.post(`/journal/${editingId.value}/post`, payload);
     else await api.post('/journal', payload);
@@ -145,6 +147,16 @@ async function reverseEntry(e){
   if(!confirm(`I-reverse ang ${e.ref}? Gagawa ng kabaligtarang entry (Dr↔Cr) at awtomatikong mag-ne-net ang GL/AR/AP/financials.`)) return;
   try { await api.post(`/journal/${e._id}/reverse`); await load(); if(detail.value?._id===e._id) detail.value=null; }
   catch(err){ error.value = err.response?.data?.message || 'Could not reverse.'; }
+}
+const savingAtts = ref(false);
+async function saveAtts(){
+  if(!detail.value) return;
+  savingAtts.value = true;
+  try {
+    const { data } = await api.patch(`/journal/${detail.value._id}/attachments`, { attachments: detail.value.attachments || [] });
+    detail.value = data.entry; await load();
+  } catch(e){ error.value = e.response?.data?.message || 'Could not save attachments.'; }
+  finally { savingAtts.value = false; }
 }
 async function discardDraft(e){
   if(!confirm(`Discard draft ${e.ref}? Hindi na ito mababawi.`)) return;
@@ -194,6 +206,10 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
         <div class="col-6 col-md-3"><label class="form-label">Transaction date</label><input v-model="form.date" type="date" class="form-control" /></div>
         <div class="col-6 col-md-3"><label class="form-label">Reference # (optional)</label><input v-model="form.reference" class="form-control" placeholder="e.g. INV-0001 / CI#" /></div>
         <div class="col-12 col-md-6"><label class="form-label">Memo / description (Particulars)</label><input v-model="form.memo" class="form-control" placeholder="e.g. Vending product sale — Amaia Sucat" /></div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Attachments (links)</label>
+        <AttachmentLinks v-model="form.attachments" />
       </div>
 
       <div class="je-head d-none d-lg-flex">
@@ -270,6 +286,14 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
           <tr class="gp"><td class="lbl" colspan="6">Total</td><td class="num">{{ peso(detail.totalDebit) }}</td><td class="num">{{ peso(detail.totalCredit) }}</td></tr>
         </tbody>
       </table>
+      <div class="mt-3">
+        <div class="d-flex align-items-center justify-content-between mb-1">
+          <label class="form-label mb-0">Attachments (links)</label>
+          <button v-if="isOwner" class="btn btn-ghost btn-sm" :disabled="savingAtts" @click="saveAtts">{{ savingAtts ? 'Saving…' : 'Save attachments' }}</button>
+        </div>
+        <AttachmentLinks v-if="isOwner" :model-value="detail.attachments || []" @update:model-value="v => detail.attachments = v" />
+        <AttachmentLinks v-else :model-value="detail.attachments || []" readonly />
+      </div>
     </div></div>
 
     <!-- List + filters -->
@@ -305,7 +329,8 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
                 <span v-if="!isManual(e) && i===0" class="pill src ms-1">AUTO</span>
                 <span v-if="e.status==='VOID' && i===0" class="badge7 off ms-1">VOID</span>
                 <span v-if="e.reversed && i===0" class="badge7 off ms-1">Reversed</span>
-                <span v-if="e.reverses && i===0" class="badge7 parked ms-1">Reversal</span></td>
+                <span v-if="e.reverses && i===0" class="badge7 parked ms-1">Reversal</span>
+                <span v-if="e.attachments?.length && i===0" class="ms-1" title="May attachment">📎</span></td>
               <td class="num">{{ l.debit ? peso(l.debit) : '' }}</td>
               <td class="num">{{ l.credit ? peso(l.credit) : '' }}</td>
               <td class="lbl text-muted small">{{ l.description }}</td>
