@@ -22,7 +22,7 @@ const isoForInput = (d)=> d ? new Date(d).toLocaleDateString('en-CA',{ timeZone:
 // supplier side
 const supplierPayments = ref([]);
 const supplierSummary = ref({ due:0, paid:0, balance:0 });
-const spay = ref({ amount:0, currency:'PHP', fxRate:1, method:'', reference:'', supplier:'' });
+const spay = ref({ amount:0, currency:'PHP', fxRate:1, method:'T/T', reference:'', supplier:'' });
 
 const busy = ref(false);
 
@@ -68,7 +68,7 @@ async function open(o){
     terms.value = { targetInstallationDate: isoForInput(data.order.targetInstallationDate), delayChargeEnabled: !!data.order.delayChargeEnabled };
     delayInfo.value = data.delayCharge || null;
     pay.value = { amount: data.order.amountPaid ? data.order.balance : Math.round(data.order.totalAmount*0.5), type: data.order.amountPaid ? 'FULL' : 'DOWN', reference:'' };
-    spay.value = { amount: supplierSummary.value.balance || 0, currency:'PHP', fxRate:1, method:'', reference:'', supplier:'' };
+    spay.value = { amount: supplierSummary.value.balance || 0, currency:'PHP', fxRate:1, method:'T/T', reference:'', supplier:'' };
   } catch(e){ error.value = e.response?.data?.message || 'Could not open order.'; }
 }
 function close(){ selected.value=null; }
@@ -107,7 +107,7 @@ async function recordSupplierPayment(){
   try {
     const { data } = await api.post(`/sales-orders/${selected.value._id}/supplier-payments`, spay.value);
     supplierPayments.value = data.supplierPayments; supplierSummary.value = data.supplier;
-    spay.value = { amount: data.supplier.balance || 0, currency:'PHP', fxRate:1, method:'', reference:'', supplier:'' };
+    spay.value = { amount: data.supplier.balance || 0, currency:'PHP', fxRate:1, method:'T/T', reference:'', supplier:'' };
   } catch(e){ error.value = e.response?.data?.message || 'Could not record supplier payment.'; }
   finally { busy.value=false; }
 }
@@ -265,7 +265,13 @@ onMounted(async ()=>{ await load(); try { const { data } = await api.get('/suppl
         <div class="col-6 col-md-3"><label class="form-label">Amount</label><input v-model.number="spay.amount" type="number" class="form-control form-control-sm numeric" /></div>
         <div class="col-6 col-md-2"><label class="form-label">Currency</label><input v-model="spay.currency" class="form-control form-control-sm" placeholder="PHP/USD" /></div>
         <div class="col-6 col-md-2"><label class="form-label">FX rate</label><input v-model.number="spay.fxRate" type="number" class="form-control form-control-sm numeric" /></div>
-        <div class="col-6 col-md-2"><label class="form-label">Method</label><input v-model="spay.method" class="form-control form-control-sm" placeholder="T/T" /></div>
+        <div class="col-6 col-md-2"><label class="form-label">Method</label>
+          <select v-model="spay.method" class="form-select form-select-sm">
+            <option value="T/T">T/T</option>
+            <option value="Credit Card">Credit Card</option>
+          </select></div>
+        <div class="col-6 col-md-2"><label class="form-label">Reference / CI #</label>
+          <input v-model="spay.reference" class="form-control form-control-sm" placeholder="Commercial invoice #" /></div>
         <div class="col-8 col-md-2"><label class="form-label">Supplier</label>
           <select v-model="spay.supplier" class="form-select form-select-sm"><option value="">—</option>
             <option v-for="s in suppliers" :key="s._id" :value="s._id">{{ s.name }}</option></select></div>
