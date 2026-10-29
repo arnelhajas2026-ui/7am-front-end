@@ -270,6 +270,7 @@ onMounted(async () => { await loadFilters(); await load(); });
         <div><label class="form-label">Status</label>
           <select class="form-select" v-model="f.status">
             <option value="POSTED">Posted</option>
+            <option value="REVERSED">Reversed</option>
             <option value="VOID">Void</option>
             <option value="ALL">All</option>
           </select>
@@ -318,7 +319,8 @@ onMounted(async () => { await loadFilters(); await load(); });
                 <span class="jbadge" :class="JBADGE[r.journalClass]">{{ r.journalClass }}</span>
               </template>
               <template v-else-if="c.t === 'status'">
-                <span class="pill" :class="r.status === 'POSTED' ? 'ok' : (r.status === 'VOID' ? 'warn' : '')">{{ r.status === 'POSTED' ? 'Posted' : (r.status === 'VOID' ? 'Void' : r.status) }}</span>
+                <span class="pill" :class="r.reversed ? 'warn' : (r.status === 'POSTED' ? 'ok' : (r.status === 'VOID' ? 'warn' : ''))">{{ r.reversed ? 'Reversed' : (r.status === 'POSTED' ? 'Posted' : (r.status === 'VOID' ? 'Void' : r.status)) }}</span>
+                <span v-if="r.isReversal" class="jbadge j-gj" style="margin-left:4px">Reversal</span>
               </template>
               <template v-else>{{ cellValue(r, c) }}</template>
             </td>

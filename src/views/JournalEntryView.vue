@@ -141,6 +141,11 @@ async function restoreEntry(e){
   try { await api.post(`/journal/${e._id}/restore`); await load(); if(detail.value?._id===e._id) detail.value=null; }
   catch(err){ error.value = err.response?.data?.message || 'Could not restore.'; }
 }
+async function reverseEntry(e){
+  if(!confirm(`I-reverse ang ${e.ref}? Gagawa ng kabaligtarang entry (Dr↔Cr) at awtomatikong mag-ne-net ang GL/AR/AP/financials.`)) return;
+  try { await api.post(`/journal/${e._id}/reverse`); await load(); if(detail.value?._id===e._id) detail.value=null; }
+  catch(err){ error.value = err.response?.data?.message || 'Could not reverse.'; }
+}
 async function discardDraft(e){
   if(!confirm(`Discard draft ${e.ref}? Hindi na ito mababawi.`)) return;
   try { await api.delete(`/journal/${e._id}`); await load(); if(detail.value?._id===e._id) detail.value=null; }
@@ -227,7 +232,7 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
       <div class="d-flex justify-content-between align-items-start mb-2">
         <div><h5 class="mb-0" style="font-family:var(--font-display)">{{ detail.ref }}
           <span v-if="!isManual(detail)" class="pill src ms-1">AUTO · {{ srcLabel(detail) }}</span>
-          <span class="badge7 ms-1" :class="detail.status==='VOID' ? 'off' : (detail.status==='PARKED' ? 'parked' : 'emp')">{{ detail.status }}</span></h5>
+          <span class="badge7 ms-1" :class="detail.status==='VOID' ? 'off' : (detail.status==='PARKED' ? 'parked' : 'emp')">{{ detail.status }}</span><span v-if="detail.reversed" class="badge7 off ms-1">Reversed</span><span v-if="detail.reverses" class="badge7 parked ms-1">Reversal</span></h5>
           <div class="text-muted small">{{ detail.status==='PARKED' ? 'Saved (draft)' : 'Posted' }}: {{ fmtDateTime(detail.createdAt) }}</div>
           <div class="text-muted small">Transaction date: {{ fmtDate(detail.date) }} · {{ detail.memo }}</div></div>
         <div class="d-flex gap-2 flex-wrap justify-content-end">
@@ -241,6 +246,7 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
           </template>
           <template v-else>
             <button v-if="isOwner" class="btn btn-ink btn-sm" @click="openEdit(detail)">Edit</button>
+            <button v-if="isOwner && !detail.reversed && !detail.reverses" class="btn btn-ghost btn-sm" @click="reverseEntry(detail)">↩ Reverse</button>
             <button v-if="isOwner" class="btn btn-ghost btn-sm" @click="voidEntry(detail)">Void</button>
           </template>
           <button class="btn btn-ghost btn-sm" @click="detail=null">Close</button>
@@ -297,7 +303,9 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
               <td class="lbl"><span class="je-ref">{{ e.ref }}</span>
                 <span v-if="isParked(e) && i===0" class="badge7 parked ms-1">Parked</span>
                 <span v-if="!isManual(e) && i===0" class="pill src ms-1">AUTO</span>
-                <span v-if="e.status==='VOID' && i===0" class="badge7 off ms-1">VOID</span></td>
+                <span v-if="e.status==='VOID' && i===0" class="badge7 off ms-1">VOID</span>
+                <span v-if="e.reversed && i===0" class="badge7 off ms-1">Reversed</span>
+                <span v-if="e.reverses && i===0" class="badge7 parked ms-1">Reversal</span></td>
               <td class="num">{{ l.debit ? peso(l.debit) : '' }}</td>
               <td class="num">{{ l.credit ? peso(l.credit) : '' }}</td>
               <td class="lbl text-muted small">{{ l.description }}</td>
