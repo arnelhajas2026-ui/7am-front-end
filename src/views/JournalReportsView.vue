@@ -57,28 +57,28 @@ const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFrac
 // ---- Column definitions kada journal (structure lang ang nagbabago) ----
 const COLS = {
   ALL: [
-    { k: 'date', h: 'Date', t: 'date' }, { k: 'ref', h: 'JE No.' },
+    { k: 'date', h: 'Date', t: 'date' }, { k: 'referenceNo', h: 'Reference #' }, { k: 'ref', h: 'JE #' },
     { k: 'journalClass', h: 'Journal', t: 'journal' }, { k: 'source', h: 'Source' },
     { k: 'memo', h: 'Description' }, { k: 'totalDebit', h: 'Debit', t: 'money' },
     { k: 'totalCredit', h: 'Credit', t: 'money' }, { k: 'status', h: 'Status', t: 'status' },
     { k: '_view', h: '', t: 'view' },
   ],
   CRJ: [
-    { k: 'date', h: 'Date', t: 'date' }, { k: 'ref', h: 'Receipt No.' },
-    { k: 'txnType', h: 'Source / Reference' }, { k: 'memo', h: 'Customer / Description' },
+    { k: 'date', h: 'Date', t: 'date' }, { k: 'referenceNo', h: 'Reference #' }, { k: 'ref', h: 'JE #' },
+    { k: 'txnType', h: 'Type' }, { k: 'memo', h: 'Customer / Description' },
     { k: 'accountDebited', h: 'Account Debited' }, { k: 'accountCredited', h: 'Account Credited' },
     { k: 'amount', h: 'Amount', t: 'money' }, { k: 'costCenter', h: 'Cost Center', t: 'cc' },
     { k: 'status', h: 'Status', t: 'status' }, { k: '_view', h: '', t: 'view' },
   ],
   CDJ: [
-    { k: 'date', h: 'Date', t: 'date' }, { k: 'ref', h: 'Payment No.' },
+    { k: 'date', h: 'Date', t: 'date' }, { k: 'referenceNo', h: 'Reference #' }, { k: 'ref', h: 'JE #' },
     { k: 'memo', h: 'Payee / Description' }, { k: 'accountDebited', h: 'Account Debited' },
     { k: 'accountCredited', h: 'Account Credited' }, { k: 'amount', h: 'Amount', t: 'money' },
     { k: 'paymentMethod', h: 'Payment Method' }, { k: 'costCenter', h: 'Cost Center', t: 'cc' },
     { k: 'status', h: 'Status', t: 'status' }, { k: '_view', h: '', t: 'view' },
   ],
   SJ: [
-    { k: 'date', h: 'Date', t: 'date' }, { k: 'ref', h: 'Invoice No.' },
+    { k: 'date', h: 'Date', t: 'date' }, { k: 'referenceNo', h: 'Reference #' }, { k: 'ref', h: 'JE #' },
     { k: 'party', h: 'Customer' }, { k: 'txnType', h: 'Description' },
     { k: 'salesAmount', h: 'Sales Amount', t: 'money' }, { k: 'discount', h: 'Discount', t: 'money' },
     { k: 'withholding', h: 'Withholding Tax', t: 'money' }, { k: 'arAmount', h: 'A/R Amount', t: 'money' },
@@ -86,14 +86,14 @@ const COLS = {
     { k: '_view', h: '', t: 'view' },
   ],
   PJ: [
-    { k: 'date', h: 'Date', t: 'date' }, { k: 'ref', h: 'Supplier Invoice No.' },
+    { k: 'date', h: 'Date', t: 'date' }, { k: 'referenceNo', h: 'Reference #' }, { k: 'ref', h: 'JE #' },
     { k: 'party', h: 'Supplier' }, { k: 'txnType', h: 'Description' },
     { k: 'purchaseAmount', h: 'Purchase Amount', t: 'money' }, { k: 'discount', h: 'Discount', t: 'money' },
     { k: 'apAmount', h: 'A/P Amount', t: 'money' }, { k: 'costCenter', h: 'Cost Center', t: 'cc' },
     { k: 'status', h: 'Status', t: 'status' }, { k: '_view', h: '', t: 'view' },
   ],
   GJ: [
-    { k: 'date', h: 'Date', t: 'date' }, { k: 'ref', h: 'JE No.' },
+    { k: 'date', h: 'Date', t: 'date' }, { k: 'referenceNo', h: 'Reference #' }, { k: 'ref', h: 'JE #' },
     { k: 'source', h: 'Source' }, { k: 'memo', h: 'Description' },
     { k: 'accountDebited', h: 'Account Debited' }, { k: 'accountCredited', h: 'Account Credited' },
     { k: 'amount', h: 'Amount', t: 'money' }, { k: 'costCenter', h: 'Cost Center', t: 'cc' },
@@ -361,6 +361,7 @@ onMounted(async () => { await loadFilters(); await load(); });
         <div v-else-if="modal.entry">
           <div class="meta">
             <div><span>Date</span>{{ fmtDate(modal.entry.date) }}</div>
+            <div><span>Reference #</span>{{ modal.row.referenceNo || '—' }}</div>
             <div><span>Transaction Type</span>{{ modal.row.txnType || '—' }}</div>
             <div><span>Source Module</span>{{ modal.row.source || '—' }}</div>
             <div><span>Posting Status</span>{{ modal.entry.status }}</div>

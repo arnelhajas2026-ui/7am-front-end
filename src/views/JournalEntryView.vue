@@ -35,7 +35,7 @@ function todayPH(){ return new Date().toLocaleDateString('en-CA', { timeZone:'As
 function isoDatePH(d){ return new Date(d).toLocaleDateString('en-CA', { timeZone:'Asia/Manila' }); }
 
 function blankLine(){ return { accountCode:'', costCenter:'', machine:'', debit:0, credit:0, description:'' }; }
-const form = ref({ date: todayPH(), memo:'', lines:[ blankLine(), blankLine() ] });
+const form = ref({ date: todayPH(), reference:'', memo:'', lines:[ blankLine(), blankLine() ] });
 
 function addLine(){ form.value.lines.push(blankLine()); }
 function removeLine(i){ form.value.lines.splice(i,1); }
@@ -90,10 +90,10 @@ function cleanLines(){
       debit:Number(l.debit)||0, credit:Number(l.credit)||0, description:l.description||'' }));
 }
 
-function openNew(){ form.value = { date: todayPH(), memo:'', lines:[ blankLine(), blankLine() ] }; editingId.value=null; editingStatus.value=''; showForm.value=true; detail.value=null; window.scrollTo({top:0,behavior:'smooth'}); }
+function openNew(){ form.value = { date: todayPH(), reference:'', memo:'', lines:[ blankLine(), blankLine() ] }; editingId.value=null; editingStatus.value=''; showForm.value=true; detail.value=null; window.scrollTo({top:0,behavior:'smooth'}); }
 function openEdit(e){
   form.value = {
-    date: isoDatePH(e.date), memo: e.memo || '',
+    date: isoDatePH(e.date), reference: e.referenceNo || '', memo: e.memo || '',
     lines: e.lines.map(l=>({ accountCode: l.accountCode, costCenter: l.costCenter||'',
       machine: l.machine?._id || l.machine || '', debit: l.debit||0, credit: l.credit||0, description: l.description||'' })),
   };
@@ -109,7 +109,7 @@ async function save(){
   if(!balanced.value){ error.value = 'Hindi balanse — dapat pantay ang Debit at Credit, at hindi zero.'; return; }
   saving.value=true; error.value='';
   try {
-    const payload = { date: form.value.date, memo: form.value.memo, lines: cleanLines() };
+    const payload = { date: form.value.date, reference: form.value.reference, memo: form.value.memo, lines: cleanLines() };
     if(editingId.value && editingStatus.value==='POSTED') await api.patch(`/journal/${editingId.value}`, payload);
     else if(editingId.value && editingStatus.value==='PARKED') await api.post(`/journal/${editingId.value}/post`, payload);
     else await api.post('/journal', payload);
@@ -183,7 +183,8 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
       </div>
       <div class="row g-2 mb-3">
         <div class="col-6 col-md-3"><label class="form-label">Transaction date</label><input v-model="form.date" type="date" class="form-control" /></div>
-        <div class="col-12 col-md-9"><label class="form-label">Memo / description (Particulars)</label><input v-model="form.memo" class="form-control" placeholder="e.g. Vending product sale — Amaia Sucat" /></div>
+        <div class="col-6 col-md-3"><label class="form-label">Reference # (optional)</label><input v-model="form.reference" class="form-control" placeholder="e.g. INV-0001 / CI#" /></div>
+        <div class="col-12 col-md-6"><label class="form-label">Memo / description (Particulars)</label><input v-model="form.memo" class="form-control" placeholder="e.g. Vending product sale — Amaia Sucat" /></div>
       </div>
 
       <div class="je-head d-none d-lg-flex">
@@ -244,10 +245,11 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
       <p v-if="isOwner && detail.status==='POSTED' && !isManual(detail)" class="text-muted small mb-2" style="color:var(--bad)!important">
         ⚠ Auto-posted ito. Ang pag-edit ay maaaring mag-desync sa pinagmulang transaction at maaaring ma-overwrite kapag na-re-post ang source.
       </p>
-      <table class="fin-table ruled"><thead><tr><th class="lbl">Date</th><th class="lbl">Account</th><th class="lbl">Type</th><th class="lbl">Cost Ctr</th><th class="lbl">Machine</th><th>Debit</th><th>Credit</th></tr></thead>
+      <table class="fin-table ruled"><thead><tr><th class="lbl">Date</th><th class="lbl">Reference #</th><th class="lbl">Account</th><th class="lbl">Type</th><th class="lbl">Cost Ctr</th><th class="lbl">Machine</th><th>Debit</th><th>Credit</th></tr></thead>
         <tbody>
           <tr v-for="(l,i) in detail.lines" :key="i">
             <td class="lbl">{{ fmtDate(detail.date) }}</td>
+            <td class="lbl">{{ detail.referenceNo || '—' }}</td>
             <td class="lbl">{{ l.accountCode }} · {{ l.accountName }}</td>
             <td class="lbl">{{ l.accountType || '—' }}</td>
             <td class="lbl">{{ l.costCenter || '—' }}</td>
@@ -255,7 +257,7 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
             <td class="num">{{ l.debit ? peso(l.debit) : '' }}</td>
             <td class="num">{{ l.credit ? peso(l.credit) : '' }}</td>
           </tr>
-          <tr class="gp"><td class="lbl" colspan="5">Total</td><td class="num">{{ peso(detail.totalDebit) }}</td><td class="num">{{ peso(detail.totalCredit) }}</td></tr>
+          <tr class="gp"><td class="lbl" colspan="6">Total</td><td class="num">{{ peso(detail.totalDebit) }}</td><td class="num">{{ peso(detail.totalCredit) }}</td></tr>
         </tbody>
       </table>
     </div></div>
@@ -277,13 +279,14 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
     <div v-else class="card"><div class="card-body p-0" style="overflow-x:auto">
       <table class="fin-table ruled gj-screen" style="min-width:1000px">
         <thead><tr>
-          <th class="lbl">Date</th><th class="lbl">Account Code</th><th class="lbl">Accounts</th><th class="lbl">JE</th>
+          <th class="lbl">Date</th><th class="lbl">Reference #</th><th class="lbl">Account Code</th><th class="lbl">Accounts</th><th class="lbl">JE</th>
           <th>Debit Amount</th><th>Credit Amount</th><th class="lbl">Description</th><th class="lbl">Account Type</th><th class="lbl">Particulars</th>
         </tr></thead>
         <tbody>
           <template v-for="e in shownEntries" :key="e._id">
             <tr v-for="(l,i) in e.lines" :key="e._id+'-'+i" class="gj-line" :class="{ voided: e.status==='VOID' }" @click="detail=e">
               <td class="lbl">{{ fmtDate(e.date) }}</td>
+              <td class="lbl">{{ e.referenceNo || '—' }}</td>
               <td class="lbl">{{ l.accountCode }}</td>
               <td class="lbl">{{ l.accountName }}</td>
               <td class="lbl"><span class="je-ref">{{ e.ref }}</span>
@@ -296,7 +299,7 @@ onMounted(async ()=>{ setCurrentMonth(); await load(); });
               <td class="lbl">{{ l.accountType }}</td>
               <td class="lbl">{{ e.memo }}</td>
             </tr>
-            <tr class="gj-gap"><td colspan="9"></td></tr>
+            <tr class="gj-gap"><td colspan="10"></td></tr>
           </template>
         </tbody>
       </table>
