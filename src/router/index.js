@@ -23,6 +23,7 @@ import JournalReportsView from '../views/JournalReportsView.vue';
 import GeneralLedgerView from '../views/GeneralLedgerView.vue';
 import InventorySubledgerView from '../views/InventorySubledgerView.vue';
 import APSubledgerView from '../views/APSubledgerView.vue';
+import CreditCardLedgerView from '../views/CreditCardLedgerView.vue';
 import ARSubledgerView from '../views/ARSubledgerView.vue';
 import MachineSubledgerView from '../views/MachineSubledgerView.vue';
 import OpeningBalancesView from '../views/OpeningBalancesView.vue';
@@ -66,6 +67,7 @@ const routes = [
   { path: '/general-ledger', name: 'generalledger', component: GeneralLedgerView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/subledger-inventory', name: 'subledgerinventory', component: InventorySubledgerView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/subledger-ap', name: 'subledgerap', component: APSubledgerView, meta: { requiresAuth: true, module: 'accounting' } },
+  { path: '/credit-card-ledger', name: 'subledgercc', component: CreditCardLedgerView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/subledger-ar', name: 'subledgerar', component: ARSubledgerView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/subledger-machine', name: 'subledgermachine', component: MachineSubledgerView, meta: { requiresAuth: true, module: 'accounting' } },
   { path: '/opening-balances', name: 'openingbalances', component: OpeningBalancesView, meta: { requiresAuth: true, module: 'accounting' } },

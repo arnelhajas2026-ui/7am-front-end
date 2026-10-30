@@ -41,7 +41,7 @@ function reset(){ form.value = { supplier:'', reference:'', date:today(), dueDat
 const total = computed(()=> form.value.items.reduce((s,i)=> s + Number(i.quantity||0)*Number(i.unitCost||0), 0));
 const peso = (n)=> '₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2, maximumFractionDigits:2});
 const balOf = (p)=> Number(p.total||0) - Number(p.amountPaid||0);
-const methodLabel = (m)=> m==='CASH' ? 'Cash (paid)' : m==='BANK' ? 'Bank (paid)' : 'Credit Card';
+const methodLabel = (m)=> m==='CASH' ? 'Cash (paid)' : m==='BANK' ? 'Bank (paid)' : m==='CREDIT_CARD' ? 'Credit Card' : 'Supplier Credit (AP)';
 
 async function load(){
   loading.value=true; error.value='';
@@ -97,7 +97,7 @@ onMounted(load);
         <button class="btn btn-primary btn-sm" @click="showForm ? reset() : openForm()">{{ showForm ? 'Close' : '+ Record purchase' }}</button>
       </div>
     </div>
-    <p class="text-muted">Credit (credit card) purchases become Credit Card Payable; pay them to reduce cash. Cash/Bank purchases are paid outright.</p>
+    <p class="text-muted">Credit purchases become payable — Supplier Credit → Accounts Payable, Credit Card → Credit Card Payable. Settle them to reduce cash. Cash/Bank purchases are paid outright.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
 
     <!-- Bulk import (xlsx/csv) -->
@@ -158,7 +158,7 @@ onMounted(load);
       </div>
 
       <template v-if="balOf(selected)>0">
-        <p class="section-eyebrow mb-2">Pay credit card (reduces cash)</p>
+        <p class="section-eyebrow mb-2">Settle payable (reduces cash)</p>
         <div class="row g-2 align-items-end">
           <div class="col-6 col-md-3"><label class="form-label">Amount</label><input v-model.number="pay.amount" type="number" class="form-control form-control-sm numeric" /></div>
           <div class="col-6 col-md-4"><label class="form-label">Payment type</label>
@@ -185,7 +185,8 @@ onMounted(load);
         <div class="col-6 col-md-2"><label class="form-label">Due date</label><input v-model="form.dueDate" type="date" class="form-control" /></div>
         <div class="col-6 col-md-4"><label class="form-label">Payment</label>
           <select v-model="form.paymentMethod" class="form-select">
-            <option value="CREDIT">Credit (payable)</option>
+            <option value="CREDIT">Supplier Credit / Payable (AP)</option>
+            <option value="CREDIT_CARD">Credit Card</option>
             <option value="CASH">Cash (paid now)</option>
             <option value="BANK">Bank (paid now)</option>
           </select></div>

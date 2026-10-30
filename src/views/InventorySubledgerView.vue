@@ -125,15 +125,16 @@ onMounted(load);
       </div>
       <div v-if="ledgerLoading" class="text-muted small">Loading…</div>
       <div v-else class="card"><div class="card-body p-0" style="overflow-x:auto">
-        <table class="fin-table ruled" style="min-width:1100px">
+        <table class="fin-table ruled" style="min-width:1220px">
           <thead><tr>
-            <th class="lbl">Date</th><th class="lbl">Ref No.</th><th class="lbl">Transaction Type</th><th class="lbl">Product ID</th>
+            <th class="lbl">Date</th><th class="lbl">Invoice Ref</th><th class="lbl">Ref No.</th><th class="lbl">Transaction Type</th><th class="lbl">Product ID</th>
             <th class="lbl">Product Name</th><th class="lbl">From Location</th><th class="lbl">To Location</th><th class="lbl">Machine / Location</th>
             <th>Qty In</th><th>Qty Out</th><th>Unit Cost</th><th>Running Qty</th><th>Running Value</th>
           </tr></thead>
           <tbody>
             <tr v-for="(r,i) in ledgerRows" :key="i">
               <td class="lbl">{{ fmtDate(r.date) }}</td>
+              <td class="lbl">{{ r.invoiceRef || '—' }}</td>
               <td class="lbl">{{ r.ref }}</td>
               <td class="lbl">{{ r.transactionType }}</td>
               <td class="lbl">{{ r.productId }}</td>
@@ -147,7 +148,7 @@ onMounted(load);
               <td class="num fw-semibold">{{ r.runningQty }}</td>
               <td class="num">{{ peso(r.runningValue) }}</td>
             </tr>
-            <tr v-if="!ledgerRows.length"><td colspan="13" class="text-center text-muted py-3">Walang movement sa filter na ito.</td></tr>
+            <tr v-if="!ledgerRows.length"><td colspan="14" class="text-center text-muted py-3">Walang movement sa filter na ito.</td></tr>
           </tbody>
         </table>
       </div></div>

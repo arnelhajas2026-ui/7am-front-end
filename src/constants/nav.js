@@ -22,6 +22,7 @@ export const NAV = [
   { name: 'generalledger', label: 'General Ledger', icon: 'ledger',  module: 'accounting', group: 'Accounting' },
   { name: 'subledgerinventory', label: 'Inventory Sub-Ledger', icon: 'layers', module: 'accounting', group: 'Accounting' },
   { name: 'subledgerap', label: 'AP Sub-Ledger', icon: 'truck',  module: 'accounting', group: 'Accounting' },
+  { name: 'subledgercc', label: 'Credit Card Payable Ledger', icon: 'wallet', module: 'accounting', group: 'Accounting' },
   { name: 'subledgerar', label: 'AR Sub-Ledger', icon: 'ledger', module: 'accounting', group: 'Accounting' },
   { name: 'subledgermachine', label: 'Machine Inventory Sub-Ledger', icon: 'layers', module: 'accounting', group: 'Accounting' },
   { name: 'openingbalances', label: 'Opening Balances', icon: 'journal', module: 'accounting', group: 'Accounting' },

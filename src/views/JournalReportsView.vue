@@ -90,7 +90,7 @@ const COLS = {
     { k: 'date', h: 'Date', t: 'date' }, { k: 'referenceNo', h: 'Reference #' }, { k: 'ref', h: 'JE #' },
     { k: 'party', h: 'Supplier' }, { k: 'txnType', h: 'Description' },
     { k: 'purchaseAmount', h: 'Purchase Amount', t: 'money' }, { k: 'discount', h: 'Discount', t: 'money' },
-    { k: 'apAmount', h: 'A/P Amount', t: 'money' }, { k: 'costCenter', h: 'Cost Center', t: 'cc' },
+    { k: 'apAmount', h: 'Payable Amount', t: 'money' }, { k: 'costCenter', h: 'Cost Center', t: 'cc' },
     { k: 'status', h: 'Status', t: 'status' }, { k: '_view', h: '', t: 'view' },
   ],
   GJ: [
@@ -115,7 +115,7 @@ const tileDefs = computed(() => {
     case 'CRJ': return [m('Total Receipts', t.totalReceipts), m('Cash', t.cash), m('Bank / GCash', t.bankGcash), n('Transactions', t.transactions)];
     case 'CDJ': return [m('Total Disbursements', t.totalDisbursements), m('Total Debit', t.totalDebit), m('Total Credit', t.totalCredit), n('Transactions', t.transactions)];
     case 'SJ':  return [m('Total Sales', t.totalSales), m('Total A/R', t.totalAR), m('Total Discounts', t.totalDiscounts), n('Transactions', t.transactions)];
-    case 'PJ':  return [m('Total Purchases', t.totalPurchases), m('Total A/P', t.totalAP), m('Total Discounts', t.totalDiscounts), n('Transactions', t.transactions)];
+    case 'PJ':  return [m('Total Purchases', t.totalPurchases), m('Total Payable', t.totalAP), m('Total Discounts', t.totalDiscounts), n('Transactions', t.transactions)];
     default:    return [m('Total Debit', t.totalDebit), m('Total Credit', t.totalCredit), n('Transactions', t.transactions)];
   }
 });
