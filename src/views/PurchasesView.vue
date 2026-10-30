@@ -41,7 +41,7 @@ function reset(){ form.value = { supplier:'', reference:'', date:today(), dueDat
 const total = computed(()=> form.value.items.reduce((s,i)=> s + Number(i.quantity||0)*Number(i.unitCost||0), 0));
 const peso = (n)=> '₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2, maximumFractionDigits:2});
 const balOf = (p)=> Number(p.total||0) - Number(p.amountPaid||0);
-const methodLabel = (m)=> m==='CASH' ? 'Cash (paid)' : m==='BANK' ? 'Bank (paid)' : m==='CREDIT_CARD' ? 'Credit Card' : 'Supplier Credit (AP)';
+const methodLabel = (m)=> m==='CASH' ? 'Cash (paid)' : m==='BANK' ? 'Bank (paid)' : m==='CREDIT_CARD' ? 'Credit Card' : 'Accounts Payable';
 
 async function load(){
   loading.value=true; error.value='';
@@ -185,7 +185,7 @@ onMounted(load);
         <div class="col-6 col-md-2"><label class="form-label">Due date</label><input v-model="form.dueDate" type="date" class="form-control" /></div>
         <div class="col-6 col-md-4"><label class="form-label">Payment</label>
           <select v-model="form.paymentMethod" class="form-select">
-            <option value="CREDIT">Supplier Credit / Payable (AP)</option>
+            <option value="CREDIT">Accounts Payable (Supplier Credit)</option>
             <option value="CREDIT_CARD">Credit Card</option>
             <option value="CASH">Cash (paid now)</option>
             <option value="BANK">Bank (paid now)</option>
