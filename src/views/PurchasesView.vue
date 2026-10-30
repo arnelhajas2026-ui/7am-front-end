@@ -41,7 +41,7 @@ function reset(){ form.value = { supplier:'', reference:'', date:today(), dueDat
 const total = computed(()=> form.value.items.reduce((s,i)=> s + Number(i.quantity||0)*Number(i.unitCost||0), 0));
 const peso = (n)=> '₱'+Number(n||0).toLocaleString('en-PH',{minimumFractionDigits:2, maximumFractionDigits:2});
 const balOf = (p)=> Number(p.total||0) - Number(p.amountPaid||0);
-const methodLabel = (m)=> m==='CASH' ? 'Cash' : m==='BANK' ? 'Bank' : 'Credit';
+const methodLabel = (m)=> m==='CASH' ? 'Cash (paid)' : m==='BANK' ? 'Bank (paid)' : 'Credit Card';
 
 async function load(){
   loading.value=true; error.value='';
@@ -61,9 +61,9 @@ async function save(){
 function openForm(){ showForm.value=true; selected.value=null; if(!form.value.items.length) addItem(); }
 
 const selected = ref(null);
-const pay = ref({ amount:0 });
+const pay = ref({ amount:0, payType:'BANK' });
 const settling = ref(false);
-function viewPurchase(p){ selected.value = p; pay.value = { amount: balOf(p) }; window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function viewPurchase(p){ selected.value = p; pay.value = { amount: balOf(p), payType: pay.value.payType || 'BANK' }; window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function closeView(){ selected.value = null; }
 const savingAtts = ref(false);
 async function saveAtts(){
@@ -78,9 +78,9 @@ const lineTotal = (it)=> Number(it.quantity||0) * Number(it.unitCost||0);
 async function settle(){
   settling.value=true; error.value='';
   try {
-    const { data } = await api.post(`/purchases/${selected.value._id}/payments`, { amount: pay.value.amount });
+    const { data } = await api.post(`/purchases/${selected.value._id}/payments`, { amount: pay.value.amount, payType: pay.value.payType });
     selected.value = data.purchase;
-    pay.value = { amount: balOf(data.purchase) };
+    pay.value = { amount: balOf(data.purchase), payType: pay.value.payType };
     await load();
   } catch(e){ error.value = e.response?.data?.message || 'Could not record payment.'; }
   finally { settling.value=false; }
@@ -97,7 +97,7 @@ onMounted(load);
         <button class="btn btn-primary btn-sm" @click="showForm ? reset() : openForm()">{{ showForm ? 'Close' : '+ Record purchase' }}</button>
       </div>
     </div>
-    <p class="text-muted">Credit purchases become Accounts Payable; settle them to reduce cash.</p>
+    <p class="text-muted">Credit (credit card) purchases become Credit Card Payable; pay them to reduce cash. Cash/Bank purchases are paid outright.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
 
     <!-- Bulk import (xlsx/csv) -->
@@ -158,9 +158,15 @@ onMounted(load);
       </div>
 
       <template v-if="balOf(selected)>0">
-        <p class="section-eyebrow mb-2">Settle payable (reduces cash)</p>
+        <p class="section-eyebrow mb-2">Pay credit card (reduces cash)</p>
         <div class="row g-2 align-items-end">
-          <div class="col-6 col-md-4"><label class="form-label">Amount</label><input v-model.number="pay.amount" type="number" class="form-control form-control-sm numeric" /></div>
+          <div class="col-6 col-md-3"><label class="form-label">Amount</label><input v-model.number="pay.amount" type="number" class="form-control form-control-sm numeric" /></div>
+          <div class="col-6 col-md-4"><label class="form-label">Payment type</label>
+            <select v-model="pay.payType" class="form-select form-select-sm">
+              <option value="ON_HAND">Cash on Hand</option>
+              <option value="BANK">Cash in Bank</option>
+              <option value="GCASH">Cash in GCash / E-Wallet</option>
+            </select></div>
           <div class="col-6 col-md-3"><button class="btn btn-primary btn-sm w-100" :disabled="settling" @click="settle">Record payment</button></div>
         </div>
       </template>

@@ -116,10 +116,11 @@ async function onExport({ format, orientation, paper }){
       </div>
       <div class="card"><div class="card-body p-0" style="overflow-x:auto">
         <table class="fin-table ruled" style="min-width:680px">
-          <thead><tr><th class="lbl">Date</th><th class="lbl">Ref</th><th class="lbl">Cost Ctr</th><th class="lbl">Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+          <thead><tr><th class="lbl">Date</th><th class="lbl">Reference #</th><th class="lbl">JE #</th><th class="lbl">Cost Ctr</th><th class="lbl">Description</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
           <tbody>
             <tr v-for="(r,i) in detailRows" :key="i">
               <td class="lbl">{{ fmtDate(r.date) }}</td>
+              <td class="lbl">{{ r.referenceNo || '—' }}</td>
               <td class="lbl">{{ r.ref }}</td>
               <td class="lbl">{{ r.costCenter || '—' }}</td>
               <td class="lbl text-muted small">{{ r.description || r.memo }}</td>
@@ -127,7 +128,7 @@ async function onExport({ format, orientation, paper }){
               <td class="num">{{ r.credit ? peso(r.credit) : '' }}</td>
               <td class="num fw-semibold">{{ peso(r.balance) }}</td>
             </tr>
-            <tr v-if="!detailRows.length"><td colspan="7" class="text-center text-muted py-3">No postings for this account.</td></tr>
+            <tr v-if="!detailRows.length"><td colspan="8" class="text-center text-muted py-3">No postings for this account.</td></tr>
           </tbody>
         </table>
       </div></div>
