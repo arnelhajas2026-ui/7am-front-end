@@ -1,4 +1,5 @@
 <script setup>
+import SystemUpdate from '../components/SystemUpdate.vue';
 import { ref, onMounted } from 'vue';
 import api from '../services/api.js';
 import { PRODUCT_REFERENCE } from '../constants/productReference.js';
@@ -86,6 +87,12 @@ onMounted(load);
     <p class="text-muted">Business-wide rules reused across pricing, VAT, and expenses.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
     <div v-if="saved" class="alert alert-success py-2">Settings saved.</div>
+
+    <div class="card mb-3"><div class="card-body">
+      <p class="section-eyebrow mb-1">System Updates</p>
+      <p class="text-muted small mb-3">Pindutin ang Update para makuha ang pinakabagong bersyon ng system.</p>
+      <SystemUpdate />
+    </div></div>
 
     <div v-if="cfg" class="card">
       <div class="card-body">
