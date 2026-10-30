@@ -18,7 +18,15 @@ const machines = ref([]);
 const detailProduct = ref(null);
 const ledgerRows = ref([]);
 const ledgerLoading = ref(false);
-const f = ref({ start: '', end: '', machine: '', type: '' });
+const f = ref({ start: '', end: '', machine: '', type: '', invoice: '' });
+// Display: pinakabago muna (most recent first). Ang running qty/value ay naka-compute na
+// sa buong history, kaya tama pa rin ang bawat row kahit baligtad ang pagkakasunod.
+// Ang Invoice Ref filter ay client-side (instant habang nagta-type).
+const displayLedger = computed(() => {
+  const q = f.value.invoice.trim().toLowerCase();
+  const list = q ? ledgerRows.value.filter((r) => (r.invoiceRef || '').toLowerCase().includes(q)) : ledgerRows.value;
+  return list.slice().reverse();
+});
 const showExport = ref(false);
 const exporting = ref(false);
 
@@ -41,7 +49,7 @@ async function load() {
 }
 async function openLedger(r) {
   detailProduct.value = { _id: r.product, sku: r.sku, name: r.name };
-  f.value = { start: '', end: '', machine: '', type: '' };
+  f.value = { start: '', end: '', machine: '', type: '', invoice: '' };
   await loadLedger();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -67,6 +75,7 @@ async function onExport({ format, orientation, paper }) {
     if (f.value.end) params.end = f.value.end;
     if (f.value.machine) params.machine = f.value.machine;
     if (f.value.type) params.type = f.value.type;
+    if (f.value.invoice) params.invoice = f.value.invoice;
     await downloadFromApi(api, '/inventory/export', params, `inventory-ledger.${format === 'docx' ? 'docx' : format === 'xlsx' ? 'xlsx' : 'pdf'}`);
     showExport.value = false;
   } catch (e) { error.value = e.response?.data?.message || 'Could not export.'; }
@@ -122,6 +131,8 @@ onMounted(load);
         <div class="col-6 col-md-4"><label class="form-label mb-0 small text-muted">Transaction type</label>
           <select v-model="f.type" class="form-select form-select-sm" @change="loadLedger"><option value="">All</option>
             <option v-for="t in TXN_TYPES" :key="t" :value="t">{{ t }}</option></select></div>
+        <div class="col-6 col-md-4"><label class="form-label mb-0 small text-muted">Invoice Ref</label>
+          <input v-model="f.invoice" type="text" class="form-control form-control-sm" placeholder="Invoice # (purchase)" /></div>
       </div>
       <div v-if="ledgerLoading" class="text-muted small">Loading…</div>
       <div v-else class="card"><div class="card-body p-0" style="overflow-x:auto">
@@ -132,7 +143,7 @@ onMounted(load);
             <th>Qty In</th><th>Qty Out</th><th>Unit Cost</th><th>Running Qty</th><th>Running Value</th>
           </tr></thead>
           <tbody>
-            <tr v-for="(r,i) in ledgerRows" :key="i">
+            <tr v-for="(r,i) in displayLedger" :key="i">
               <td class="lbl">{{ fmtDate(r.date) }}</td>
               <td class="lbl">{{ r.invoiceRef || '—' }}</td>
               <td class="lbl">{{ r.ref }}</td>
@@ -148,7 +159,7 @@ onMounted(load);
               <td class="num fw-semibold">{{ r.runningQty }}</td>
               <td class="num">{{ peso(r.runningValue) }}</td>
             </tr>
-            <tr v-if="!ledgerRows.length"><td colspan="14" class="text-center text-muted py-3">Walang movement sa filter na ito.</td></tr>
+            <tr v-if="!displayLedger.length"><td colspan="14" class="text-center text-muted py-3">Walang movement sa filter na ito.</td></tr>
           </tbody>
         </table>
       </div></div>

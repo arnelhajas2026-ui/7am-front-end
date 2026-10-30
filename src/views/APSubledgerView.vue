@@ -23,6 +23,19 @@ const exportAll = ref(false);       // true = detalye ng LAHAT ng supplier
 const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 const reconciled = computed(() => control.value && Math.abs(control.value.diff) < 0.01);
 
+// Detail filters (client-side, instant) + newest-first sort sa Date Entered.
+const df = ref({ reference: '', datePurchased: '' });
+const isoDay = (d) => (d ? new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) : '');
+const detailRows = computed(() => {
+  if (!detail.value) return [];
+  const q = df.value.reference.trim().toLowerCase();
+  const dp = df.value.datePurchased;
+  const list = detail.value.rows.filter((r) =>
+    (!q || (r.reference || '').toLowerCase().includes(q)) &&
+    (!dp || isoDay(r.datePurchased) === dp));
+  return list.slice().reverse();
+});
+
 async function load() {
   loading.value = true; error.value = '';
   try {
@@ -32,7 +45,7 @@ async function load() {
   finally { loading.value = false; }
 }
 async function openDetail(r) {
-  detailLoading.value = true; detail.value = null;
+  detailLoading.value = true; detail.value = null; df.value = { reference: '', datePurchased: '' };
   try {
     const { data } = await api.get('/ledger/ap-detail', { params: { supplier: r.supplierId } });
     detail.value = data;
@@ -97,6 +110,13 @@ onMounted(load);
       <div v-if="detail.alert" class="alert py-2" :class="detail.alert.overdue ? 'alert-danger' : 'alert-warning'">
         ⚠ <strong>Due Alert:</strong> {{ alertText(detail.alert) }}
       </div>
+      <div class="row g-2 mb-2">
+        <div class="col-6 col-md-4"><label class="form-label mb-0 small text-muted">Reference</label>
+          <input v-model="df.reference" type="text" class="form-control form-control-sm" placeholder="Invoice # / reference" /></div>
+        <div class="col-6 col-md-3"><label class="form-label mb-0 small text-muted">Date purchased</label>
+          <input v-model="df.datePurchased" type="date" class="form-control form-control-sm" /></div>
+        <div class="col-12 col-md-2 d-flex align-items-end"><button class="btn btn-ghost btn-sm" @click="df = { reference: '', datePurchased: '' }">Clear</button></div>
+      </div>
       <div class="card"><div class="card-body p-0" style="overflow-x:auto">
         <table class="fin-table ruled" style="min-width:980px">
           <thead><tr>
@@ -105,7 +125,7 @@ onMounted(load);
             <th>Amount Due</th><th>Payment</th><th>Age</th><th>Balance</th>
           </tr></thead>
           <tbody>
-            <tr v-for="(r,i) in detail.rows" :key="i" :class="{ 'pay-row': r.kind==='PAYMENT' }">
+            <tr v-for="(r,i) in detailRows" :key="i" :class="{ 'pay-row': r.kind==='PAYMENT' }">
               <td class="lbl">{{ r.entered ? fmtDate(r.entered) : '—' }}</td>
               <td class="lbl">{{ r.supplier }}</td>
               <td class="lbl">{{ r.reference }}</td>
@@ -117,7 +137,7 @@ onMounted(load);
               <td class="num">{{ r.age == null ? '' : r.age }}</td>
               <td class="num fw-semibold">{{ peso(r.balance) }}</td>
             </tr>
-            <tr v-if="!detail.rows.length"><td colspan="10" class="text-center text-muted py-3">Walang transaksyon.</td></tr>
+            <tr v-if="!detailRows.length"><td colspan="10" class="text-center text-muted py-3">Walang transaksyon sa filter na ito.</td></tr>
           </tbody>
         </table>
       </div></div>
