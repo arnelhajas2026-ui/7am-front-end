@@ -172,6 +172,7 @@ async function save(){
           throw ce;
         }
       }
+      if(!customerId){ error.value='Kailangan ang Customer. Pumili o magdagdag muna ng customer.'; saving.value=false; return; }
       const lines = pform.lines.filter((l) => l.product || l.description).map((l) => ({ product:l.product||undefined, description:l.description, quantity:Number(l.quantity)||0, unitPrice:Number(l.unitPrice)||0 }));
       if(!lines.length){ error.value='Magdagdag man lang ng isang produkto.'; saving.value=false; return; }
       const deductions = { discount: Number(pform.discount)||0, withholding: Number(pform.withholding)||0, discountType: pform.discountType, saleType: pform.saleType, cashAccount: pform.cashAccount };
@@ -181,6 +182,7 @@ async function save(){
         await api.post('/quotations', { kind:'PRODUCT', customer: customerId || undefined, date: pform.date, vatStatus: pform.vatStatus, items: lines, ...deductions });
       }
     } else {
+      if(!form.customer){ error.value = 'Kailangan ang Customer. Pumili muna ng customer.'; saving.value=false; return; }
       if(!(Number(form.supplierCost) > 0)){ error.value = 'Kailangan ang Supplier Cost (hindi pwedeng 0 o blangko).'; saving.value=false; return; }
       await api.post('/quotations', { kind:'MACHINE', ...form });
     }
@@ -265,7 +267,7 @@ onMounted(load);
       <p class="section-eyebrow mb-3">{{ editingId ? 'Edit quotation (Draft)' : 'New product quotation' }}</p>
       <div class="row g-2 mb-2">
         <div class="col-12 col-md-4">
-          <label class="form-label">Customer</label>
+          <label class="form-label">Customer <span class="text-danger">*</span></label>
           <SearchableSelect v-if="!pform.newCustomer" v-model="pform.customer" :options="customerOptions" placeholder="— search customer —" size="md" />
           <input v-else v-model="pform.newCustomerName" class="form-control" placeholder="New customer name" @input="checkNewCustomer" />
         </div>
@@ -336,7 +338,7 @@ onMounted(load);
       <div class="col-12 col-lg-7"><div class="card"><div class="card-body">
         <p class="section-eyebrow mb-3">Machine quotation</p>
         <div class="row g-2">
-          <div class="col-12 col-md-4"><label class="form-label">Customer</label>
+          <div class="col-12 col-md-4"><label class="form-label">Customer <span class="text-danger">*</span></label>
             <SearchableSelect v-model="form.customer" :options="customerOptions" placeholder="— search customer —" size="md" /></div>
           <div class="col-6 col-md-3"><label class="form-label">Date <span class="text-muted small">(editable)</span></label>
             <input v-model="form.date" type="date" class="form-control" /></div>

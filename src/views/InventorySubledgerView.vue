@@ -19,13 +19,11 @@ const detailProduct = ref(null);
 const ledgerRows = ref([]);
 const ledgerLoading = ref(false);
 const f = ref({ start: '', end: '', machine: '', type: '', invoice: '' });
-// Display: pinakabago muna (most recent first). Ang running qty/value ay naka-compute na
-// sa buong history, kaya tama pa rin ang bawat row kahit baligtad ang pagkakasunod.
+// Display: chronological (oldest→newest) para nasa pinakahuling row ang ending balance.
 // Ang Invoice Ref filter ay client-side (instant habang nagta-type).
 const displayLedger = computed(() => {
   const q = f.value.invoice.trim().toLowerCase();
-  const list = q ? ledgerRows.value.filter((r) => (r.invoiceRef || '').toLowerCase().includes(q)) : ledgerRows.value;
-  return list.slice().reverse();
+  return q ? ledgerRows.value.filter((r) => (r.invoiceRef || '').toLowerCase().includes(q)) : ledgerRows.value;
 });
 const showExport = ref(false);
 const exporting = ref(false);

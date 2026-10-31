@@ -203,7 +203,9 @@ function exportCsv() {
       return /[",\n]/.test(v) ? `"${v}"` : v;
     }).join(','));
   }
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  // UTF-8 BOM (﻿) para tama ang mga special character (hal. em-dash "—") kapag binuksan
+  // sa Excel — kung wala ito, binabasa ng Excel bilang Windows-1252 kaya nagiging "â€”".
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = `${journal.value}_Journal_${f.start}_to_${f.end}.csv`;

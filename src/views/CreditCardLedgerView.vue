@@ -22,17 +22,17 @@ const exportAll = ref(false);       // true = detalye ng LAHAT ng supplier
 const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 const reconciled = computed(() => control.value && Math.abs(control.value.diff) < 0.01);
 
-// Detail filters (client-side, instant) + newest-first sort sa Date Entered.
+// Detail filters (client-side, instant). Chronological order (oldest→newest) para nasa
+// pinakahuling row ang ending balance.
 const df = ref({ reference: '', datePurchased: '' });
 const isoDay = (d) => (d ? new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) : '');
 const detailRows = computed(() => {
   if (!detail.value) return [];
   const q = df.value.reference.trim().toLowerCase();
   const dp = df.value.datePurchased;
-  const list = detail.value.rows.filter((r) =>
+  return detail.value.rows.filter((r) =>
     (!q || (r.reference || '').toLowerCase().includes(q)) &&
     (!dp || isoDay(r.datePurchased) === dp));
-  return list.slice().reverse();
 });
 
 async function load() {
