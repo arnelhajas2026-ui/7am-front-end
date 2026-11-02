@@ -42,6 +42,7 @@ import CustomerLedgerView from '../views/CustomerLedgerView.vue';
 import PurchasesView from '../views/PurchasesView.vue';
 import TransfersView from '../views/TransfersView.vue';
 import RiderDeliveriesView from '../views/RiderDeliveriesView.vue';
+import ReimbursementsView from '../views/ReimbursementsView.vue';
 import RidersView from '../views/RidersView.vue';
 
 const routes = [
@@ -82,6 +83,7 @@ const routes = [
   { path: '/payment-compare', name: 'paymentcompare', component: PaymentComparisonView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/customer-ledger', name: 'customerledger', component: CustomerLedgerView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/rider-deliveries', name: 'riderdeliveries', component: RiderDeliveriesView, meta: { requiresAuth: true, riderAllowed: true } },
+  { path: '/reimbursements', name: 'reimbursements', component: ReimbursementsView, meta: { requiresAuth: true, riderAllowed: true } },
   { path: '/riders', name: 'riders', component: RidersView, meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/approvals', name: 'approvals', component: ApprovalsView, meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/accounts',  name: 'accounts',  component: AccountsView,  meta: { requiresAuth: true, ownerOnly: true } },

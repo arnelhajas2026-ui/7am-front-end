@@ -39,6 +39,7 @@ export const NAV = [
 
   // Rider section — nakikita ng RIDER (sariling deliveries) at ng Owner (lahat).
   { name: 'riderdeliveries', label: 'Transfers / Deliveries', icon: 'truck', riderOnly: true, group: 'Rider' },
+  { name: 'reimbursements', label: 'Reimbursements', icon: 'wallet', riderOnly: true, group: 'Rider' },
 
   { name: 'products',  label: 'Products',  icon: 'box',    module: 'inventory',  group: 'Master Data' },
   { name: 'machines',  label: 'Machines',  icon: 'server', module: 'machineOps', group: 'Master Data' },
