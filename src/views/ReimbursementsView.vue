@@ -3,6 +3,7 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { useAuthStore } from '../stores/auth.js';
 import { fmtDate } from '../utils/datetime.js';
+import AttachmentLinks from '../components/AttachmentLinks.vue';
 
 const auth = useAuthStore();
 const isOwner = computed(() => auth.isOwner || auth.isSuperadmin);
@@ -18,6 +19,7 @@ const CATEGORIES = [
 const items = ref([]);
 const riders = ref([]);
 const machines = ref([]);
+const costCenters = ref([]);
 const loading = ref(false);
 const error = ref('');
 const showForm = ref(false);
@@ -26,14 +28,14 @@ const saving = ref(false);
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 
-const blankLine = () => ({ category: '', description: '', amount: 0, machine: '' });
-const form = reactive({ rider: '', date: today(), cashAccount: 'ON_HAND', notes: '', lines: [blankLine()] });
+const blankLine = () => ({ category: '', description: '', amount: 0, costCenter: '', machine: '' });
+const form = reactive({ rider: '', date: today(), cashAccount: 'ON_HAND', notes: '', attachments: [], lines: [blankLine()] });
 
 const formTotal = computed(() => form.lines.reduce((s, l) => s + (Number(l.amount) || 0), 0));
 
 function resetForm() {
   form.rider = ''; form.date = today(); form.cashAccount = 'ON_HAND'; form.notes = '';
-  form.lines = [blankLine()];
+  form.attachments = []; form.lines = [blankLine()];
 }
 function addLine() { form.lines.push(blankLine()); }
 function removeLine(i) { form.lines.splice(i, 1); if (!form.lines.length) form.lines.push(blankLine()); }
@@ -41,11 +43,12 @@ function removeLine(i) { form.lines.splice(i, 1); if (!form.lines.length) form.l
 async function load() {
   loading.value = true; error.value = '';
   try {
-    const reqs = [api.get('/reimbursements'), api.get('/machines')];
+    const reqs = [api.get('/reimbursements'), api.get('/machines'), api.get('/cost-centers')];
     if (isOwner.value) reqs.push(api.get('/riders'));
-    const [r, m, rd] = await Promise.all(reqs);
+    const [r, m, cc, rd] = await Promise.all(reqs);
     items.value = r.data.reimbursements;
     machines.value = m.data.machines || [];
+    costCenters.value = (cc.data.costCenters || []).filter((c) => c.active !== false);
     if (rd) riders.value = rd.data.riders || [];
   } catch (e) { error.value = e.response?.data?.message || 'Could not load reimbursements.'; }
   finally { loading.value = false; }
@@ -55,11 +58,14 @@ async function submit() {
   saving.value = true; error.value = '';
   try {
     const lines = form.lines
-      .map((l) => ({ category: l.category, description: l.description, amount: Number(l.amount) || 0, machine: l.machine || undefined }))
+      .map((l) => ({ category: l.category, description: l.description, amount: Number(l.amount) || 0, costCenter: l.costCenter, machine: l.machine || undefined }))
       .filter((l) => l.category && l.amount > 0);
     if (!lines.length) { error.value = 'Magdagdag man lang ng isang linya (may category at amount).'; saving.value = false; return; }
+    if (lines.some((l) => !l.costCenter)) { error.value = 'Kailangan ang Cost Center sa bawat linya.'; saving.value = false; return; }
+    const validAtt = (form.attachments || []).filter((a) => /^https?:\/\//i.test((a.url || '').trim()));
+    if (!validAtt.length) { error.value = 'Kailangan ng kahit isang evidence (receipt/invoice) na valid na link (https://…).'; saving.value = false; return; }
     await api.post('/reimbursements', {
-      rider: form.rider || undefined, date: form.date, cashAccount: form.cashAccount, notes: form.notes, lines,
+      rider: form.rider || undefined, date: form.date, cashAccount: form.cashAccount, notes: form.notes, attachments: validAtt, lines,
     });
     showForm.value = false; resetForm(); await load();
   } catch (e) { error.value = e.response?.data?.message || 'Could not submit.'; }
@@ -117,10 +123,11 @@ onMounted(load);
       </div>
 
       <div class="table-responsive">
-        <table class="table table-sm align-middle" style="min-width:680px">
+        <table class="table table-sm align-middle" style="min-width:860px">
           <thead><tr>
-            <th style="width:22%">Category</th><th>Description</th>
-            <th style="width:20%">Machine (optional)</th><th style="width:15%" class="text-end">Amount</th><th style="width:40px"></th>
+            <th style="width:20%">Category</th><th>Description</th>
+            <th style="width:18%">Cost Center <span class="text-danger">*</span></th>
+            <th style="width:16%">Machine (optional)</th><th style="width:13%" class="text-end">Amount</th><th style="width:40px"></th>
           </tr></thead>
           <tbody>
             <tr v-for="(l,i) in form.lines" :key="i">
@@ -129,6 +136,10 @@ onMounted(load);
                 <option v-for="c in CATEGORIES" :key="c" :value="c">{{ c }}</option>
               </select></td>
               <td><input v-model="l.description" class="form-control form-control-sm" placeholder="Detalye (optional)" /></td>
+              <td><select v-model="l.costCenter" class="form-select form-select-sm">
+                <option value="">— pumili —</option>
+                <option v-for="c in costCenters" :key="c._id" :value="c.code">{{ c.code }} — {{ c.name }}</option>
+              </select></td>
               <td><select v-model="l.machine" class="form-select form-select-sm">
                 <option value="">—</option>
                 <option v-for="m in machines" :key="m._id" :value="m._id">{{ m.locationName || m.machineId }}</option>
@@ -138,12 +149,15 @@ onMounted(load);
             </tr>
           </tbody>
           <tfoot><tr>
-            <td colspan="3"><button class="btn btn-ghost btn-sm" @click="addLine">+ Add line</button></td>
+            <td colspan="4"><button class="btn btn-ghost btn-sm" @click="addLine">+ Add line</button></td>
             <td class="text-end fw-bold">{{ peso(formTotal) }}</td><td></td>
           </tr></tfoot>
         </table>
       </div>
 
+      <div class="mb-2"><label class="form-label mb-0 small text-muted">Evidence (receipt / invoice) <span class="text-danger">*</span></label>
+        <AttachmentLinks v-model="form.attachments" />
+        <div class="form-text">I-upload sa Google Drive/Dropbox, i-paste ang share link. Kahit isang valid na link (https://…) ay kailangan.</div></div>
       <div class="mb-2"><label class="form-label mb-0 small text-muted">Notes</label>
         <textarea v-model="form.notes" rows="2" class="form-control form-control-sm" placeholder="Karagdagang paliwanag (optional)"></textarea></div>
       <div class="d-flex gap-2">
@@ -167,9 +181,11 @@ onMounted(load);
             <td class="lbl">
               <div v-for="(l,i) in r.lines" :key="i" class="small">
                 {{ l.category }}<span v-if="l.description"> — {{ l.description }}</span>
+                <span v-if="l.costCenter"> · CC {{ l.costCenter }}</span>
                 <span v-if="l.machine"> · {{ l.machine.locationName || l.machine.machineId }}</span>
                 <span class="text-muted"> ({{ peso(l.amount) }})</span>
               </div>
+              <AttachmentLinks v-if="r.attachments && r.attachments.length" :model-value="r.attachments" readonly class="mt-1" />
             </td>
             <td class="lbl small">{{ cashLabel(r.cashAccount) }}</td>
             <td class="num fw-semibold">{{ peso(r.total) }}</td>
