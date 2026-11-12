@@ -9,6 +9,33 @@ const suppliers = ref([]);
 const products = ref([]);
 const loading = ref(false);
 const error = ref('');
+
+// --- Selling-price review alerts (tina-trigger kapag nagbago ang unit cost) ---
+const priceAlerts = ref([]);
+const resolvingId = ref('');
+// Mungkahing presyo para mapanatili ang parehong margin sa bagong cost.
+function suggestPrice(a){
+  if (a.oldCost > 0 && a.oldSellingPrice > 0) return Math.round((a.newCost * (a.oldSellingPrice / a.oldCost)) * 100) / 100;
+  return a.sellingPrice || a.newCost;
+}
+async function loadAlerts(){
+  try {
+    const { data } = await api.get('/products/price-alerts');
+    priceAlerts.value = (data.alerts || []).map((a)=> ({ ...a, _newPrice: suggestPrice(a) }));
+  } catch { /* non-fatal */ }
+}
+async function resolveAlert(a){
+  resolvingId.value = a.product; error.value='';
+  try { await api.post(`/products/${a.product}/resolve-price`, { sellingPrice: Number(a._newPrice)||0 }); await loadAlerts(); await load(); }
+  catch(e){ error.value = e.response?.data?.message || 'Could not update selling price.'; }
+  finally { resolvingId.value=''; }
+}
+async function dismissAlert(a){
+  resolvingId.value = a.product; error.value='';
+  try { await api.post(`/products/${a.product}/dismiss-alert`); await loadAlerts(); }
+  catch(e){ error.value = e.response?.data?.message || 'Could not dismiss.'; }
+  finally { resolvingId.value=''; }
+}
 const showForm = ref(false);
 const saving = ref(false);
 
@@ -30,7 +57,8 @@ async function runImport(){
   try {
     const fd = new FormData(); fd.append('file', importFile.value);
     const { data } = await api.post('/purchases/import', fd, { headers:{ 'Content-Type':'multipart/form-data' } });
-    importResult.value = data; importFile.value = null; await load();
+    importResult.value = data; importFile.value = null; await load(); await loadAlerts();
+    if (data.costAlerts?.length) window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch(e){ error.value = e.response?.data?.message || 'Could not import.'; }
   finally { importing.value=false; }
 }
@@ -54,7 +82,8 @@ async function load(){
 }
 async function save(){
   saving.value=true; error.value='';
-  try { await api.post('/purchases', form.value); reset(); await load(); }
+  try { const { data } = await api.post('/purchases', form.value); reset(); await load(); await loadAlerts();
+    if (data.costAlerts?.length) window.scrollTo({ top: 0, behavior: 'smooth' }); }
   catch(e){ error.value = e.response?.data?.message || 'Could not save purchase.'; }
   finally { saving.value=false; }
 }
@@ -85,7 +114,7 @@ async function settle(){
   } catch(e){ error.value = e.response?.data?.message || 'Could not record payment.'; }
   finally { settling.value=false; }
 }
-onMounted(load);
+onMounted(async ()=>{ await load(); await loadAlerts(); });
 </script>
 
 <template>
@@ -99,6 +128,39 @@ onMounted(load);
     </div>
     <p class="text-muted">Credit purchases become payable — Supplier Credit → Accounts Payable, Credit Card → Credit Card Payable. Settle them to reduce cash. Cash/Bank purchases are paid outright.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
+
+    <!-- ⚠ Selling-price review alerts (nagbago ang unit cost) -->
+    <div v-if="priceAlerts.length" class="card mb-4" style="border-color:#F0A94A">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span style="font-size:1.1rem">⚠️</span>
+          <strong style="color:#B9770E">{{ priceAlerts.length }} produkto ang nagbago ang unit cost — i-review ang selling price</strong>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="fin-table" style="min-width:760px">
+            <thead><tr>
+              <th class="lbl">Product</th><th>Dating cost</th><th>Bagong cost</th><th>Change</th>
+              <th>Current SP</th><th class="lbl">Bagong Selling Price</th><th class="lbl">Aksyon</th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="a in priceAlerts" :key="a.product">
+                <td class="lbl">{{ a.name }}<span v-if="a.sku" class="text-muted small"> · {{ a.sku }}</span></td>
+                <td class="num">{{ peso(a.oldCost) }}</td>
+                <td class="num fw-semibold">{{ peso(a.newCost) }}</td>
+                <td class="num" :style="a.pct>=0 ? 'color:#B23B3B' : 'color:#2A7D4F'">{{ a.pct>=0?'+':'' }}{{ a.pct }}%</td>
+                <td class="num">{{ peso(a.sellingPrice) }}</td>
+                <td><input v-model.number="a._newPrice" type="number" min="0" step="0.01" class="form-control form-control-sm text-end" style="max-width:130px" /></td>
+                <td class="lbl"><div class="d-flex gap-1">
+                  <button class="btn btn-primary btn-sm" :disabled="resolvingId===a.product" @click="resolveAlert(a)">Save</button>
+                  <button class="btn btn-ghost btn-sm" :disabled="resolvingId===a.product" @click="dismissAlert(a)">Dismiss</button>
+                </div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="form-text mt-1">Ang "Bagong Selling Price" ay naka-mungkahi para mapanatili ang dating margin — pwede mong baguhin bago i-save. Ang Dismiss ay nag-a-alis ng alert nang hindi binabago ang presyo.</div>
+      </div>
+    </div>
 
     <!-- Bulk import (xlsx/csv) -->
     <div v-if="showImport" class="card mb-4"><div class="card-body">

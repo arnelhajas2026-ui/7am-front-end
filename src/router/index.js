@@ -40,6 +40,7 @@ import SalesOrdersView from '../views/SalesOrdersView.vue';
 import PaymentComparisonView from '../views/PaymentComparisonView.vue';
 import CustomerLedgerView from '../views/CustomerLedgerView.vue';
 import PurchasesView from '../views/PurchasesView.vue';
+import PriceSimulatorView from '../views/PriceSimulatorView.vue';
 import TransfersView from '../views/TransfersView.vue';
 import RiderDeliveriesView from '../views/RiderDeliveriesView.vue';
 import ReimbursementsView from '../views/ReimbursementsView.vue';
@@ -55,6 +56,7 @@ const routes = [
   { path: '/sales', name: 'sales', component: SalesView, meta: { requiresAuth: true, module: 'sales' } },
   { path: '/inventory', name: 'inventory', component: InventoryView, meta: { requiresAuth: true, module: 'inventory' } },
   { path: '/purchases', name: 'purchases', component: PurchasesView, meta: { requiresAuth: true, module: 'purchases' } },
+  { path: '/price-simulator', name: 'pricesimulator', component: PriceSimulatorView, meta: { requiresAuth: true, module: 'inventory' } },
   { path: '/transfers', name: 'transfers', component: TransfersView, meta: { requiresAuth: true, module: 'inventory' } },
   { path: '/reconciliation', name: 'reconciliation', component: ReconciliationView, meta: { requiresAuth: true, module: 'reconciliation' } },
   { path: '/expenses', name: 'expenses', component: ExpensesView, meta: { requiresAuth: true, module: 'expenses' } },
