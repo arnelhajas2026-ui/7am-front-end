@@ -19,7 +19,16 @@ const sim = ref({
   productId:'', unitCost:0, freight:0, expectedUnits:600,
   overheadCats:[], gasolinePerUnit:0, gasLocation:'', markupPercent:30, fixedMargin:0,
 });
-const overheadMonthly = computed(()=> sim.value.overheadCats.reduce((s,c)=> s+Number(latestExpenses.value[c]?.amount||0),0));
+// Editable na halaga kada category (default = latest mula sa Expenses; pwedeng i-override at naka-save per product).
+const overrideAmounts = ref({});
+function initAmounts(savedArr){
+  const m = {};
+  for (const c of categories.value) m[c] = Number(latestExpenses.value[c]?.amount || 0);
+  if (Array.isArray(savedArr)) for (const o of savedArr) { if (o && o.category != null) m[o.category] = Number(o.amount) || 0; }
+  overrideAmounts.value = m;
+}
+function resetAmount(c){ overrideAmounts.value[c] = Number(latestExpenses.value[c]?.amount || 0); }
+const overheadMonthly = computed(()=> sim.value.overheadCats.reduce((s,c)=> s+Number(overrideAmounts.value[c]||0),0));
 const overheadPerUnit = computed(()=> Number(sim.value.expectedUnits)>0 ? overheadMonthly.value/Number(sim.value.expectedUnits) : 0);
 const totalCostPerUnit = computed(()=> Number(sim.value.unitCost||0)+Number(sim.value.freight||0)+overheadPerUnit.value+Number(sim.value.gasolinePerUnit||0));
 const recommendedPrice = computed(()=> totalCostPerUnit.value*(1+Number(sim.value.markupPercent||0)/100)+Number(sim.value.fixedMargin||0));
@@ -41,8 +50,10 @@ function onPickProduct(){
     sim.value.gasLocation = pc.gasLocation||'';
     sim.value.markupPercent = pc.markupPercent||defaultMarkup.value;
     sim.value.fixedMargin = pc.fixedMargin||0;
+    initAmounts(pc.overheadAmounts);
   } else {
     sim.value.markupPercent = p.markupPercent||defaultMarkup.value;
+    initAmounts([]);
   }
 }
 
@@ -75,6 +86,7 @@ async function load(){
     defaultMarkup.value = pd.data.defaultMarkupPercent || 20;
     if (pd.data.gas) gas.value = { roundTrip:true, locations:[], ...pd.data.gas };
     if (!sim.value.overheadCats.length) sim.value.overheadCats = [...categories.value];  // default: isama lahat
+    initAmounts([]);
     if (!gas.value.locations.length) gas.value.locations = [{name:'Amaia Steps Sucat', legKm:12, units:600}, {name:'Avida', legKm:3, units:400}];
   } catch(e){ error.value = e.response?.data?.message || 'Could not load data.'; }
 }
@@ -84,6 +96,7 @@ async function savePricing(){
   try {
     await api.post(`/products/${sim.value.productId}/pricing`, {
       freight:sim.value.freight, expectedUnits:sim.value.expectedUnits, overheadCategories:sim.value.overheadCats,
+      overheadAmounts: categories.value.map(c=>({ category:c, amount:Number(overrideAmounts.value[c])||0 })),
       gasolinePerUnit:sim.value.gasolinePerUnit, gasLocation:sim.value.gasLocation,
       markupPercent:sim.value.markupPercent, fixedMargin:sim.value.fixedMargin,
       sellingPrice:r2(recommendedPrice.value),
@@ -125,19 +138,22 @@ onMounted(load);
           <div class="mb-2" style="max-width:280px"><label class="form-label mb-0 small text-muted">Expected monthly units (kada machine)</label>
             <input v-model.number="sim.expectedUnits" type="number" min="1" step="1" class="form-control form-control-sm text-end" /></div>
           <table class="table table-sm align-middle" style="max-width:560px">
-            <thead><tr><th style="width:40px"></th><th>Expense category</th><th class="text-end" style="width:150px">Latest / buwan</th><th class="text-end" style="width:120px">Kada unit</th></tr></thead>
+            <thead><tr><th style="width:40px"></th><th>Expense category</th><th class="text-end" style="width:190px">Halaga / buwan</th><th class="text-end" style="width:110px">Kada unit</th></tr></thead>
             <tbody>
               <tr v-for="c in categories" :key="c">
                 <td><input type="checkbox" class="form-check-input" :checked="sim.overheadCats.includes(c)" @change="toggleCat(c)" /></td>
                 <td class="lbl">{{ c }}</td>
-                <td class="num">{{ peso(latestExpenses[c]?.amount || 0) }}</td>
-                <td class="num text-muted">{{ sim.overheadCats.includes(c) && Number(sim.expectedUnits)>0 ? peso(Number(latestExpenses[c]?.amount||0)/Number(sim.expectedUnits)) : '—' }}</td>
+                <td><div class="d-flex align-items-center gap-1 justify-content-end">
+                  <input v-model.number="overrideAmounts[c]" type="number" min="0" step="0.01" class="form-control form-control-sm text-end" style="max-width:120px" />
+                  <button class="btn btn-ghost btn-sm px-1" title="Balik sa latest expense" @click="resetAmount(c)">↺</button>
+                </div></td>
+                <td class="num text-muted">{{ sim.overheadCats.includes(c) && Number(sim.expectedUnits)>0 ? peso(Number(overrideAmounts[c]||0)/Number(sim.expectedUnits)) : '—' }}</td>
               </tr>
               <tr v-if="!categories.length"><td colspan="4" class="text-muted small py-2">Walang expense category pa. Magdagdag muna ng expenses.</td></tr>
             </tbody>
             <tfoot><tr><td></td><td class="fw-semibold">Overhead (napili)</td><td class="num fw-semibold">{{ peso(overheadMonthly) }}</td><td class="num fw-bold">{{ peso(overheadPerUnit) }}</td></tr></tfoot>
           </table>
-          <div class="form-text">Awtomatikong ginagamit ang pinakabagong naitala kada category (hal. Kuryente ₱1,200 ÷ 600 = ₱2.00/unit). Mag-u-update ito kapag may bagong expense.</div>
+          <div class="form-text">Naka-default sa pinakabagong halaga mula sa Expenses, pero <strong>pwede mong i-edit</strong> ang "Halaga / buwan" (hal. Kuryente ₱1,200 ÷ 600 = ₱2.00/unit). Ang ↺ ay nagbabalik sa latest expense. Naka-save kada produkto ang override mo.</div>
         </div></div>
 
         <div class="card"><div class="card-body">
