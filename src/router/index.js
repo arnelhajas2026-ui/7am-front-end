@@ -14,6 +14,7 @@ import InventoryView from '../views/InventoryView.vue';
 import SalesView from '../views/SalesView.vue';
 import ReconciliationView from '../views/ReconciliationView.vue';
 import StockReconView from '../views/StockReconView.vue';
+import CashReconView from '../views/CashReconView.vue';
 import ExpensesView from '../views/ExpensesView.vue';
 import ReportsView from '../views/ReportsView.vue';
 import BalanceSheetView from '../views/BalanceSheetView.vue';
@@ -61,6 +62,7 @@ const routes = [
   { path: '/transfers', name: 'transfers', component: TransfersView, meta: { requiresAuth: true, module: 'inventory' } },
   { path: '/reconciliation', name: 'reconciliation', component: ReconciliationView, meta: { requiresAuth: true, module: 'reconciliation' } },
   { path: '/recon-stock', name: 'reconstock', component: StockReconView, meta: { requiresAuth: true, module: 'reconciliation' } },
+    { path: '/recon-cash', name: 'reconcash', component: CashReconView, meta: { requiresAuth: true, module: 'reconciliation' } },
   { path: '/expenses', name: 'expenses', component: ExpensesView, meta: { requiresAuth: true, module: 'expenses' } },
   { path: '/reports', name: 'reports', component: ReportsView, meta: { requiresAuth: true, module: 'reports' } },
   { path: '/balance-sheet', name: 'balancesheet', component: BalanceSheetView, meta: { requiresAuth: true, module: 'reports' } },

@@ -8,6 +8,7 @@ export const NAV = [
   { name: 'transfers', label: 'Transfers', icon: 'transfer', module: 'inventory',  group: 'Operations' },
   { name: 'reconciliation', label: 'Reconcile', icon: 'scale', module: 'reconciliation', group: 'Operations' },
   { name: 'reconstock', label: 'Stock Recon', icon: 'scale', module: 'reconciliation', group: 'Operations' },
+    { name: 'reconcash', label: 'Cash Recon', icon: 'wallet', module: 'reconciliation', group: 'Operations' },
   { name: 'expenses',  label: 'Expenses',  icon: 'wallet',  module: 'expenses',   group: 'Operations' },
   { name: 'pricesimulator', label: 'Price Simulator', icon: 'calculator', module: 'inventory', group: 'Operations' },
   // --- Insights group (derived management reports) — HIDDEN for client clarity.
