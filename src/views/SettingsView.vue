@@ -1,6 +1,6 @@
 <script setup>
 import SystemUpdate from '../components/SystemUpdate.vue';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import api from '../services/api.js';
 import { PRODUCT_REFERENCE } from '../constants/productReference.js';
 
@@ -78,7 +78,35 @@ async function testEmail(){
   catch(e){ error.value = e.response?.data?.message || 'SMTP test failed. I-check ang Gmail + App Password.'; }
   finally { testing.value=false; }
 }
-onMounted(load);
+// --- Telegram notifications ---
+const tg = ref({ enabled:false, connected:false, username:'', botUsername:'', triggers:{}, triggerKeys:[] });
+const tgConnect = ref(null);
+const tgBusy = ref('');
+const TRIGGER_LABELS = { approval:'May bagong approval request', login:'May nag-login', purchase:'May bagong purchase (o import)', reimbursement:'May bagong reimbursement', priceAlert:'Nagbago ang unit cost (price review)' };
+let tgPoll = null;
+function stopTgPoll(){ if(tgPoll){ clearInterval(tgPoll); tgPoll=null; } }
+function startTgPoll(){ stopTgPoll(); let tries=0;
+  tgPoll = setInterval(async ()=>{ tries++; await loadTg();
+    if(tg.value.connected){ tgConnect.value=null; stopTgPoll(); }
+    else if(tries>=40){ stopTgPoll(); }   // ~2 min timeout
+  }, 3000); }
+async function loadTg(){ try { const { data } = await api.get('/telegram/status'); tg.value = data; } catch { /* non-admin / off */ } }
+async function connectTg(){ tgBusy.value='connect'; error.value='';
+  try { const { data } = await api.post('/telegram/connect'); tgConnect.value = data; startTgPoll(); }
+  catch(e){ error.value = e.response?.data?.message || 'Could not start connection.'; } finally { tgBusy.value=''; } }
+async function refreshTg(){ await loadTg(); if(tg.value.connected) tgConnect.value=null; }
+async function saveTriggers(){ tgBusy.value='triggers'; error.value='';
+  try { await api.post('/telegram/triggers', { triggers: tg.value.triggers }); saved.value=true; setTimeout(()=>saved.value=false,1500); }
+  catch(e){ error.value = e.response?.data?.message || 'Could not save triggers.'; } finally { tgBusy.value=''; } }
+async function testTg(){ tgBusy.value='test'; error.value=''; testMsg.value='';
+  try { await api.post('/telegram/test'); testMsg.value='Test notification sent — i-check ang Telegram.'; }
+  catch(e){ error.value = e.response?.data?.message || 'Could not send test.'; } finally { tgBusy.value=''; } }
+async function disconnectTg(){ if(!confirm('I-disconnect ang Telegram?')) return; tgBusy.value='disconnect'; error.value='';
+  try { await api.post('/telegram/disconnect'); tgConnect.value=null; await loadTg(); }
+  catch(e){ error.value = e.response?.data?.message || 'Could not disconnect.'; } finally { tgBusy.value=''; } }
+
+onMounted(async ()=>{ await load(); await loadTg(); });
+onUnmounted(stopTgPoll);
 </script>
 
 <template>
@@ -151,6 +179,42 @@ onMounted(load);
         </div>
       </div>
     </div>
+
+    <!-- Telegram notifications -->
+    <div class="card mt-4"><div class="card-body">
+      <h5 class="mb-1" style="font-family:var(--font-display)">Telegram Notifications</h5>
+      <p class="text-muted small mb-3">Makakatanggap ang admin ng notification sa Telegram para sa mga piniling event.</p>
+      <div v-if="!tg.enabled" class="alert alert-warning py-2 mb-0">Hindi pa naka-setup ang Telegram bot sa server (<code>TELEGRAM_BOT_TOKEN</code>). Tingnan ang setup notes.</div>
+      <template v-else>
+        <div v-if="tg.connected" class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+          <span class="badge bg-success">Connected</span>
+          <span class="text-muted">{{ tg.username }}</span>
+          <button class="btn btn-ghost btn-sm" :disabled="tgBusy==='test'" @click="testTg">Send test</button>
+          <button class="btn btn-ghost btn-sm" :disabled="tgBusy==='disconnect'" @click="disconnectTg">Disconnect</button>
+        </div>
+        <div v-else class="mb-3">
+          <button class="btn btn-primary btn-sm" :disabled="tgBusy==='connect'" @click="connectTg">{{ tgBusy==='connect'?'…':'Connect Telegram' }}</button>
+          <div v-if="tgConnect" class="mt-2 p-3" style="background:#F2F5F8;border-radius:10px;max-width:520px">
+            <div class="small mb-1">1. Buksan ang bot sa Telegram:
+              <a v-if="tgConnect.link" :href="tgConnect.link" target="_blank" rel="noopener"><strong>{{ tgConnect.botUsername ? '@'+tgConnect.botUsername : 'Open bot' }}</strong></a>
+              <span v-else class="text-muted">(i-set muna ang TELEGRAM_BOT_USERNAME sa server)</span></div>
+            <div class="small mb-1">2. Pindutin ang <strong>Start</strong> sa bot (awtomatikong ipapadala ang code), o i-type: <code>/start {{ tgConnect.code }}</code></div>
+            <div v-if="tgConnect.webhookSet===false" class="small mb-2" style="color:#B9770E">⚠ Hindi pa naka-register ang webhook — i-set ang <code>API_BASE_URL</code> sa server (tingnan ang notes).</div>
+            <div class="small d-flex align-items-center gap-2 mt-1" style="color:#2B78C5">
+              <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              Hinihintay ang connection… awtomatikong mag-uupdate kapag pinindot mo ang Start.
+            </div>
+            <button class="btn btn-ghost btn-sm mt-1" @click="refreshTg">I-check ngayon</button>
+          </div>
+        </div>
+        <p class="section-eyebrow mb-2">Aling notifications ang gusto mong matanggap?</p>
+        <div class="form-check" v-for="k in tg.triggerKeys" :key="k">
+          <input class="form-check-input" type="checkbox" :id="'tg-'+k" v-model="tg.triggers[k]" :disabled="!tg.connected" />
+          <label class="form-check-label" :for="'tg-'+k">{{ TRIGGER_LABELS[k] || k }}</label>
+        </div>
+        <button class="btn btn-primary btn-sm mt-2" :disabled="tgBusy==='triggers' || !tg.connected" @click="saveTriggers">I-save ang mga trigger</button>
+      </template>
+    </div></div>
 
     <!-- Danger zone: clear test data -->
     <div class="card mt-4" style="border-color:#F3C7C7">
