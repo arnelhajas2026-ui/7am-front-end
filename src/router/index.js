@@ -66,7 +66,7 @@ const routes = [
   { path: '/reconciliation', name: 'reconciliation', component: ReconciliationView, meta: { requiresAuth: true, module: 'reconciliation' } },
   { path: '/recon-stock', name: 'reconstock', component: StockReconView, meta: { requiresAuth: true, module: 'reconciliation' } },
   { path: '/recon-cash', name: 'reconcash', component: CashReconView, meta: { requiresAuth: true, module: 'reconciliation' } },
-  { name: 'reconcashless', label: 'Cashless Recon', icon: 'receipt', module: 'reconciliation', group: 'Operations' },
+  { path: '/recon-cashless', name: 'reconcashless', component: CashlessReconView, meta: { requiresAuth: true, module: 'reconciliation' } },
   { path: '/recon-review', name: 'reconreview', component: ReconReviewView, meta: { requiresAuth: true, module: 'reconciliation' } },
   { path: '/recon-dashboard', name: 'recondashboard', component: ReconDashboardView, meta: { requiresAuth: true, module: 'reconciliation' } },
   { path: '/expenses', name: 'expenses', component: ExpensesView, meta: { requiresAuth: true, module: 'expenses' } },
