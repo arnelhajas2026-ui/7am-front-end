@@ -59,6 +59,34 @@ async function tfSubmit(saveDraft){
 
 const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 
+// --- Manual Add / Adjust Stock (para sa nakaligtaang purchase/receiving) ---
+const products = ref([]);
+const showAdjust = ref(false);
+const adjSaving = ref(false);
+const adjError = ref('');
+const adjOk = ref('');
+const adj = ref({ product:'', location:'WAREHOUSE:', quantity:1, note:'' });
+async function loadProducts(){ try { const { data } = await api.get('/products'); products.value = data.products || data || []; } catch {} }
+function openAdjust(){
+  showAdjust.value = !showAdjust.value; adjError.value=''; adjOk.value='';
+  if(showAdjust.value){ adj.value={ product:'', location:'WAREHOUSE:', quantity:1, note:'' }; if(!products.value.length) loadProducts(); }
+}
+async function adjSubmit(){
+  if(!adj.value.product){ adjError.value='Pumili ng produkto.'; return; }
+  const qty = Number(adj.value.quantity);
+  if(!qty){ adjError.value='Maglagay ng quantity na hindi 0 (puwedeng negatibo para magbawas).'; return; }
+  adjSaving.value=true; adjError.value=''; adjOk.value='';
+  try {
+    const [type, machine] = adj.value.location.split(':');
+    await api.post('/inventory/adjust', { product: adj.value.product, locationType: type, machine: machine||null, quantity: qty, note: adj.value.note });
+    adjOk.value = 'Na-record ang adjustment.';
+    adj.value.quantity = 1; adj.value.note = '';
+    await loadBalances();
+    if(detailProduct.value) await openProduct({ product: detailProduct.value });
+  } catch(e){ adjError.value = e.response?.data?.message || 'Could not adjust.'; }
+  finally { adjSaving.value=false; }
+}
+
 async function loadMachines(){
   try { const { data } = await api.get('/machines'); machines.value = data.machines; } catch {}
 }
@@ -100,13 +128,51 @@ onMounted(async ()=>{ await loadMachines(); await loadBalances(); });
     <p class="text-muted">Running stock, computed from every movement — warehouse, loaded, and side cabinet.</p>
     <div v-if="error" class="alert alert-danger py-2">{{ error }}</div>
 
-    <div class="mb-3" style="max-width:320px">
-      <label class="form-label">Location</label>
-      <select v-model="context" class="form-select" @change="change">
-        <option value="ALL">📦 All locations</option>
-        <option value="WAREHOUSE">🏬 Warehouse</option>
-        <option v-for="m in machines" :key="m._id" :value="m._id">📟 {{ m.locationName || m.machineId }}</option>
-      </select>
+    <div class="d-flex align-items-end justify-content-between flex-wrap gap-2 mb-3">
+      <div style="max-width:320px;flex:1 1 220px">
+        <label class="form-label">Location</label>
+        <select v-model="context" class="form-select" @change="change">
+          <option value="ALL">📦 All locations</option>
+          <option value="WAREHOUSE">🏬 Warehouse</option>
+          <option v-for="m in machines" :key="m._id" :value="m._id">📟 {{ m.locationName || m.machineId }}</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" @click="openAdjust">{{ showAdjust ? 'Isara' : '+ Add / Adjust Stock' }}</button>
+    </div>
+
+    <!-- Manual Add / Adjust Stock panel -->
+    <div v-if="showAdjust" class="tf-box mb-3" style="max-width:640px">
+      <div class="section-eyebrow mb-2">Manual Stock Adjustment — para sa nakaligtaang i-record</div>
+      <div v-if="adjError" class="alert alert-danger py-1 small">{{ adjError }}</div>
+      <div v-if="adjOk" class="alert alert-success py-1 small">{{ adjOk }}</div>
+      <div class="row g-2">
+        <div class="col-12">
+          <label class="form-label small mb-0">Produkto</label>
+          <select v-model="adj.product" class="form-select form-select-sm">
+            <option value="">— Pumili —</option>
+            <option v-for="p in products" :key="p._id" :value="p._id">{{ p.name }}<template v-if="p.sku"> ({{ p.sku }})</template></option>
+          </select>
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label small mb-0">Location</label>
+          <select v-model="adj.location" class="form-select form-select-sm">
+            <option v-for="o in locOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+          </select>
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label small mb-0">Quantity (+ dagdag / − bawas)</label>
+          <input v-model.number="adj.quantity" type="number" class="form-control form-control-sm numeric" />
+        </div>
+        <div class="col-12">
+          <label class="form-label small mb-0">Dahilan / Note</label>
+          <input v-model="adj.note" class="form-control form-control-sm" placeholder="hal. nakaligtaang purchase, physical count correction" />
+        </div>
+      </div>
+      <div class="d-flex justify-content-end gap-2 mt-2">
+        <button class="btn btn-ghost btn-sm" @click="showAdjust=false">Cancel</button>
+        <button class="btn btn-primary btn-sm" :disabled="adjSaving" @click="adjSubmit">{{ adjSaving ? 'Saving…' : 'Save Adjustment' }}</button>
+      </div>
+      <div class="text-muted small mt-2">Quantity lang ang ina-adjust nito (inventory ledger). Para sa may-halaga/GL na epekto ng nakaligtaang <strong>purchase</strong>, mas tama ang i-record ang purchase mismo.</div>
     </div>
 
     <div v-if="loading" class="text-muted">Loading…</div>
