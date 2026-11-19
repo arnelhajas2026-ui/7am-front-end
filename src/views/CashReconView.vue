@@ -94,7 +94,7 @@ async function openById(id){
     investItems.value = {};
     for (const v of rec.value.variances || []) investItems.value[v.productName] = { reasonCode:v.reasonCode||'', explanation:v.explanation||'', evidence:(v.evidence||[]).map(e=>({kind:e.kind,url:e.url,label:e.label})) };
 
-    step.value = ['IN_PROGRESS','DRAFT'].includes(rec.value.status) ? 'count' : 'investigate';
+    step.value = ['IN_PROGRESS','DRAFT','RECOUNT_REQUESTED','RECOUNT_SUBMITTED'].includes(rec.value.status) ? 'count' : 'investigate';
   } catch(e){ error.value = e.response?.data?.message || 'Could not open.'; }
   finally { busy.value=false; }
 }
