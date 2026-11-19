@@ -65,7 +65,7 @@ async function openById(id){
   try {
     const { data } = await api.get('/recon/cashless/'+id);
     rec.value = data.reconciliation;
-    providerRows.value = [];
+    providerRows.value = (rec.value.cashlessProviderRows || []).map(r => ({ txnRef:r.txnRef||'', amount:Number(r.amount)||0, status:r.status||'success', datetime:r.datetime||'', fee:Number(r.fee)||0, net:(r.net==null?null:Number(r.net)) }));
     matchSummary.value = null;
     investItems.value = {};
     for (const v of rec.value.variances || []) investItems.value[v.productName] = { reasonCode:v.reasonCode||'', explanation:v.explanation||'', evidence:(v.evidence||[]).map(e=>({kind:e.kind,url:e.url,label:e.label})) };
