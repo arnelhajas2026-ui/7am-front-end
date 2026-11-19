@@ -2,6 +2,8 @@
 import { ref, computed, onMounted } from 'vue';
 import api from '../services/api.js';
 import { fmtDateTime } from '../utils/datetime.js';
+import { useAuthStore } from '../stores/auth.js';
+const auth = useAuthStore();
 
 // step: 'list' | 'setup' | 'count' | 'investigate'
 const step = ref('list');
@@ -19,7 +21,7 @@ const recons = ref([]);
 const filterStatus = ref('');
 
 // --- setup ---
-const setup = ref({ locationType: 'WAREHOUSE', machine: '', countType: 'SCHEDULED', custodian: '', countDate: new Date().toISOString().slice(0,10) });
+const setup = ref({ locationType: 'WAREHOUSE', machine: '', countType: 'SCHEDULED', custodian: auth.user?._id || '', countDate: new Date().toISOString().slice(0,10) });
 
 // --- active record ---
 const rec = ref(null);
@@ -48,7 +50,7 @@ async function loadList(){
   } catch(e){ error.value = e.response?.data?.message || 'Could not load list.'; }
 }
 
-function goSetup(){ setup.value = { locationType:'WAREHOUSE', machine:'', countType:'SCHEDULED', custodian:'', countDate: new Date().toISOString().slice(0,10) }; error.value=''; step.value='setup'; }
+function goSetup(){ setup.value = { locationType:'WAREHOUSE', machine:'', countType:'SCHEDULED', custodian: auth.user?._id || '', countDate: new Date().toISOString().slice(0,10) }; error.value=''; step.value='setup'; }
 
 async function startRecon(){
   busy.value=true; error.value='';
@@ -207,10 +209,8 @@ onMounted(async ()=>{ await loadMeta(); await loadList(); });
         <input type="date" v-model="setup.countDate" class="form-control" />
       <div class="form-text">Petsa ng aktwal na physical count.</div></div>
       <div class="mb-3"><label class="form-label">Assigned counter (custodian)</label>
-        <select v-model="setup.custodian" class="form-select">
-          <option value="">— Opsyonal —</option>
-          <option v-for="u in users" :key="u._id" :value="u._id">{{ u.name }}</option>
-        </select></div>
+        <input class="form-control" :value="auth.user?.name || auth.user?.username || '—'" readonly />
+        <div class="form-text">Awtomatikong ang naka-login na user — bawal maghiraman ng ID.</div></div>
       <div class="alert alert-info py-2 small">Kapag sinimulan, makukuha ang immutable snapshot ng expected quantities at ILo-lock. Blind count — nakatago ang expected habang nagbibilang.</div>
       <button class="btn btn-primary" :disabled="busy" @click="startRecon">{{ busy?'…':'Start Blind Count' }}</button>
     </div></div>
