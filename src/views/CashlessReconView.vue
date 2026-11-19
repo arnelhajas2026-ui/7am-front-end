@@ -65,7 +65,16 @@ async function openById(id){
   try {
     const { data } = await api.get('/recon/cashless/'+id);
     rec.value = data.reconciliation;
-    providerRows.value = (rec.value.cashlessProviderRows || []).map(r => ({ txnRef:r.txnRef||'', amount:Number(r.amount)||0, status:r.status||'success', datetime:r.datetime||'', fee:Number(r.fee)||0, net:(r.net==null?null:Number(r.net)) }));
+    const savedRows = (rec.value.cashlessProviderRows || []).map(r => ({ txnRef:r.txnRef||'', amount:Number(r.amount)||0, status:r.status||'success', datetime:r.datetime||'', fee:Number(r.fee)||0, net:(r.net==null?null:Number(r.net)) }));
+    if (savedRows.length) {
+      providerRows.value = savedRows;
+    } else {
+      // Fallback: ibalik ang line items mula sa naunang match results (para sa lumang drafts na walang saved raw rows).
+      const back = { MATCHED:'success', MISSING_IN_SYSTEM:'success', AMOUNT_MISMATCH:'success', DUPLICATE:'success', PENDING:'pending', REVERSED:'reversed', REFUNDED:'refunded' };
+      providerRows.value = (rec.value.cashlessTxns || [])
+        .filter(t => t.status !== 'MISSING_IN_PROVIDER')
+        .map(t => ({ txnRef: t.txnRef==='(no ref)' ? '' : (t.txnRef||''), amount:(Number(t.providerAmount)||0)/100, status: back[t.status]||'success', datetime:'', fee:0, net:null }));
+    }
     matchSummary.value = null;
     investItems.value = {};
     for (const v of rec.value.variances || []) investItems.value[v.productName] = { reasonCode:v.reasonCode||'', explanation:v.explanation||'', evidence:(v.evidence||[]).map(e=>({kind:e.kind,url:e.url,label:e.label})) };
