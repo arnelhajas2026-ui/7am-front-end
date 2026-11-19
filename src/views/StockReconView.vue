@@ -19,7 +19,7 @@ const recons = ref([]);
 const filterStatus = ref('');
 
 // --- setup ---
-const setup = ref({ locationType: 'WAREHOUSE', machine: '', countType: 'SCHEDULED', custodian: '' });
+const setup = ref({ locationType: 'WAREHOUSE', machine: '', countType: 'SCHEDULED', custodian: '', countDate: new Date().toISOString().slice(0,10) });
 
 // --- active record ---
 const rec = ref(null);
@@ -48,7 +48,7 @@ async function loadList(){
   } catch(e){ error.value = e.response?.data?.message || 'Could not load list.'; }
 }
 
-function goSetup(){ setup.value = { locationType:'WAREHOUSE', machine:'', countType:'SCHEDULED', custodian:'' }; error.value=''; step.value='setup'; }
+function goSetup(){ setup.value = { locationType:'WAREHOUSE', machine:'', countType:'SCHEDULED', custodian:'', countDate: new Date().toISOString().slice(0,10) }; error.value=''; step.value='setup'; }
 
 async function startRecon(){
   busy.value=true; error.value='';
@@ -203,6 +203,9 @@ onMounted(async ()=>{ await loadMeta(); await loadList(); });
           <option value="SURPRISE">Surprise</option>
           <option value="SPOT_CHECK">Spot Check</option>
         </select></div>
+      <div class="mb-2"><label class="form-label">Count date</label>
+        <input type="date" v-model="setup.countDate" class="form-control" />
+      <div class="form-text">Petsa ng aktwal na physical count.</div></div>
       <div class="mb-3"><label class="form-label">Assigned counter (custodian)</label>
         <select v-model="setup.custodian" class="form-select">
           <option value="">— Opsyonal —</option>
