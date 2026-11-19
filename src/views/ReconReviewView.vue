@@ -73,6 +73,17 @@ function back(){ step.value='list'; rec.value=null; jv.value=null; notice.value=
 
 const canDecide = computed(()=> rec.value && ['FOR_REVIEW','UNDER_INVESTIGATION','PENDING_OWNER_APPROVAL'].includes(rec.value.status));
 const canPost = computed(()=> rec.value && rec.value.status==='APPROVED' && !rec.value.posted);
+const canConfirmFinal = computed(()=> rec.value && rec.value.type==='CASH' && rec.value.stage1Posted && !rec.value.posted);
+async function confirmFinalPost(){
+  if(!confirm('I-confirm at i-post ang FINAL entry (Stage 2)? Hindi na mababago pagkatapos.')) return;
+  busy.value=true; error.value='';
+  try {
+    const { data } = await api.post(`/recon/review/${rec.value._id}/confirm-final`, {});
+    rec.value = data.reconciliation;
+    notice.value = data.journalVoucherRef ? `Confirmed! Final JV: ${data.journalVoucherRef}` : 'Naisara.';
+  } catch(e){ error.value = e.response?.data?.message || 'Could not confirm.'; }
+  finally { busy.value=false; }
+}
 const variances = computed(()=> rec.value?.variances || []);
 const isStock = computed(()=> rec.value?.type==='STOCK');
 
@@ -117,7 +128,8 @@ onMounted(loadQueue);
           <div class="small text-muted">Submitted by {{ rec.submittedByName || '—' }} · {{ fmtDateTime(rec.submittedAt) }} ·
             <span class="badge" :class="statusBadge(rec.status)">{{ rec.status }}</span>
             <span v-if="rec.requiresOwnerApproval" class="badge bg-warning text-dark ms-1">Owner approval required</span>
-            <span v-if="rec.posted" class="badge bg-success ms-1">Posted {{ rec.journalVoucherRef }}</span></div>
+            <span v-if="rec.posted" class="badge bg-success ms-1">Posted {{ rec.journalVoucherRef }}</span>
+            <span v-if="rec.stage1Posted && !rec.posted" class="badge bg-info ms-1">Stage 1 posted {{ rec.stage1JournalVoucherRef }}</span></div>
         </div>
       </div>
 
@@ -172,9 +184,15 @@ onMounted(loadQueue);
       </div>
 
       <div v-if="canPost" class="mt-3 pt-3 border-top">
-        <p class="small text-muted mb-1">Approved na. I-authorize ang posting sa General Ledger (owner lang; hindi na maba-back-edit).</p>
-        <button class="btn btn-primary btn-sm" :disabled="busy || !isOwner" @click="authorizePost">Authorize Posting</button>
+        <p class="small text-muted mb-1">Approved na. I-authorize ang posting sa General Ledger (owner lang; hindi na maba-back-edit).<span v-if="rec.type==='CASH'"> Para sa cash, <strong>Stage 1</strong> (to suspense) muna ang ipo-post.</span></p>
+        <button class="btn btn-primary btn-sm" :disabled="busy || !isOwner" @click="authorizePost">{{ rec.type==='CASH' ? 'Authorize Posting (Stage 1)' : 'Authorize Posting' }}</button>
         <span v-if="!isOwner" class="small text-muted ms-2">Owner lang ang makakapag-post.</span>
+      </div>
+
+      <div v-if="canConfirmFinal" class="mt-3 pt-3 border-top">
+        <p class="small text-muted mb-1">Naka-post na ang <strong>Stage 1</strong> (investigation, JV {{ rec.stage1JournalVoucherRef }}). I-confirm at i-post ang <strong>final</strong> entry (Stage 2 — expense/income).</p>
+        <button class="btn btn-primary btn-sm" :disabled="busy || !isOwner" @click="confirmFinalPost">Confirm &amp; Post Final</button>
+        <span v-if="!isOwner" class="small text-muted ms-2">Owner lang ang makakapag-confirm.</span>
       </div>
 
       <div v-if="rec.status==='REJECTED'" class="mt-3">
