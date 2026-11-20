@@ -72,7 +72,7 @@ async function closeRec(){
 function back(){ step.value='list'; rec.value=null; jv.value=null; notice.value=''; loadQueue(); }
 
 const canDecide = computed(()=> rec.value && ['FOR_REVIEW','UNDER_INVESTIGATION','PENDING_OWNER_APPROVAL'].includes(rec.value.status));
-const canPost = computed(()=> rec.value && rec.value.status==='APPROVED' && !rec.value.posted);
+const canPost = computed(()=> rec.value && rec.value.status==='APPROVED' && !rec.value.posted && rec.value.type!=='CASH');
 const canConfirmFinal = computed(()=> rec.value && rec.value.type==='CASH' && rec.value.stage1Posted && !rec.value.posted);
 async function confirmFinalPost(){
   if(!confirm('I-confirm at i-post ang FINAL entry (Stage 2)? Hindi na mababago pagkatapos.')) return;
