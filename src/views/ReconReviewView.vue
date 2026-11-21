@@ -105,17 +105,19 @@ onMounted(loadQueue);
       <div class="mb-3"><select v-model="filterType" class="form-select form-select-sm" style="max-width:200px" @change="loadQueue">
         <option value="">— Lahat ng type —</option><option value="STOCK">Stock</option><option value="CASH">Cash</option><option value="CASHLESS">Cashless</option></select></div>
       <div class="table-responsive"><table class="table table-sm align-middle">
-        <thead><tr><th>Reference</th><th>Type</th><th>Location</th><th>Status</th><th class="text-end">Variance</th><th>Submitted by</th><th></th></tr></thead>
+        <thead><tr><th>Reference</th><th>Type</th><th>Location</th><th>Conducted</th><th>Count</th><th>Status</th><th class="text-end">Variance</th><th>Submitted by</th><th></th></tr></thead>
         <tbody>
           <tr v-for="r in queue" :key="r._id">
             <td class="fw-semibold">{{ r.refNo }}</td><td>{{ r.type }}</td><td>{{ r.locationLabel }} <span v-if="r.provider" class="text-muted">({{ r.provider }})</span></td>
+            <td class="small text-muted">{{ r.countDate ? fmtDateTime(r.countDate) : '—' }}</td>
+            <td class="small"><span v-if="r.recountCount" class="badge bg-warning text-dark">Recount{{ r.recountCount>1 ? ' #'+r.recountCount : '' }}</span><span v-else class="text-muted">1st count</span></td>
             <td><span class="badge" :class="statusBadge(r.status)">{{ r.status }}</span>
               <span v-if="r.requiresOwnerApproval" class="badge bg-warning text-dark ms-1">Owner</span></td>
             <td class="text-end">{{ r.type==='STOCK' ? (r.totalVarianceUnits+' u') : peso(r.totalVarianceCentavos) }}</td>
             <td class="small text-muted">{{ r.submittedByName || '—' }}</td>
             <td><button class="btn btn-ghost btn-sm" @click="open(r._id)">Review</button></td>
           </tr>
-          <tr v-if="!queue.length"><td colspan="7" class="text-center text-muted py-3">Walang naghihintay na review.</td></tr>
+          <tr v-if="!queue.length"><td colspan="9" class="text-center text-muted py-3">Walang naghihintay na review.</td></tr>
         </tbody>
       </table></div>
     </div></div>
