@@ -50,6 +50,17 @@ import TransfersView from '../views/TransfersView.vue';
 import RiderDeliveriesView from '../views/RiderDeliveriesView.vue';
 import ReimbursementsView from '../views/ReimbursementsView.vue';
 import RidersView from '../views/RidersView.vue';
+import EmployeesView from '../views/EmployeesView.vue';
+import AttendanceView from '../views/AttendanceView.vue';
+import LeavesView from '../views/LeavesView.vue';
+import PayrollCalculatorView from '../views/PayrollCalculatorView.vue';
+import PayrollProcessingView from '../views/PayrollProcessingView.vue';
+import LoansView from '../views/LoansView.vue';
+import PayslipView from '../views/PayslipView.vue';
+import ThirteenthMonthView from '../views/ThirteenthMonthView.vue';
+import PayrollDashboardView from '../views/PayrollDashboardView.vue';
+import RemittanceView from '../views/RemittanceView.vue';
+import PayrollReportsView from '../views/PayrollReportsView.vue';
 
 const routes = [
   { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
@@ -97,6 +108,17 @@ const routes = [
   { path: '/rider-deliveries', name: 'riderdeliveries', component: RiderDeliveriesView, meta: { requiresAuth: true, riderAllowed: true } },
   { path: '/reimbursements', name: 'reimbursements', component: ReimbursementsView, meta: { requiresAuth: true, riderAllowed: true } },
   { path: '/riders', name: 'riders', component: RidersView, meta: { requiresAuth: true, ownerOnly: true } },
+  { path: '/employees', name: 'employees', component: EmployeesView, meta: { requiresAuth: true, module: 'payroll' } },
+  { path: '/attendance', name: 'attendance', component: AttendanceView, meta: { requiresAuth: true, module: 'payroll' } },
+  { path: '/leaves', name: 'leaves', component: LeavesView, meta: { requiresAuth: true, module: 'payroll' } },
+  { path: '/payroll-calculator', name: 'payrollcalc', component: PayrollCalculatorView, meta: { requiresAuth: true, module: 'payroll' } },
+  { path: '/payroll-processing', name: 'payrollprocessing', component: PayrollProcessingView, meta: { requiresAuth: true, module: 'payroll' } },
+  { path: '/loans', name: 'loans', component: LoansView, meta: { requiresAuth: true, module: 'payroll' } },
+  { path: '/payslips', name: 'payslips', component: PayslipView, meta: { requiresAuth: true, module: 'payroll' } },
+  { path: '/thirteenth-month', name: 'thirteenth', component: ThirteenthMonthView, meta: { requiresAuth: true, module: 'payroll' } },
+  { path: '/payroll-dashboard', name: 'payrolldash', component: PayrollDashboardView, meta: { requiresAuth: true, module: 'payroll' } },
+  { path: '/remittances', name: 'remittances', component: RemittanceView, meta: { requiresAuth: true, module: 'payroll' } },
+  { path: '/payroll-reports', name: 'payrollreports', component: PayrollReportsView, meta: { requiresAuth: true, module: 'payroll' } },
   { path: '/approvals', name: 'approvals', component: ApprovalsView, meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/accounts',  name: 'accounts',  component: AccountsView,  meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/audit',     name: 'audittrail', component: AuditTrailView, meta: { requiresAuth: true, ownerOnly: true } },

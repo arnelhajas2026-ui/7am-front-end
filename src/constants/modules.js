@@ -1,7 +1,7 @@
 // Dapat KATUGMA ito ng backend constants.js
 export const MODULES = [
   'sales', 'inventory', 'purchases', 'machineOps',
-  'reconciliation', 'expenses', 'reports', 'config', 'accounts',
+  'reconciliation', 'expenses', 'reports', 'config', 'accounts', 'payroll',
 ];
 export const LEVELS = ['NONE', 'VIEW', 'EDIT'];
 
@@ -16,4 +16,5 @@ export const MODULE_LABELS = {
   reports: 'Reports',
   config: 'Configuration',
   accounts: 'Accounts',
+  payroll: 'Payroll',
 };

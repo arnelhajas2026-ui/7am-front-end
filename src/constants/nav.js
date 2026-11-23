@@ -14,6 +14,18 @@ export const NAV = [
   { name: 'recondashboard', label: 'Recon Center', icon: 'grid', module: 'reconciliation', group: 'Operations' },  
   { name: 'expenses',  label: 'Expenses',  icon: 'wallet',  module: 'expenses',   group: 'Operations' },
   { name: 'pricesimulator', label: 'Price Simulator', icon: 'calculator', module: 'inventory', group: 'Operations' },
+
+  { name: 'employees', label: 'Employees', icon: 'user', module: 'payroll', group: 'Payroll' },
+  { name: 'attendance', label: 'Attendance', icon: 'check', module: 'payroll', group: 'Payroll' },
+  { name: 'leaves', label: 'Leaves', icon: 'calendar', module: 'payroll', group: 'Payroll' },
+  { name: 'payrollcalc', label: 'Calculator', icon: 'calculator', module: 'payroll', group: 'Payroll' },
+  { name: 'payrollprocessing', label: 'Processing', icon: 'journal', module: 'payroll', group: 'Payroll' },
+  { name: 'loans', label: 'Loans', icon: 'wallet', module: 'payroll', group: 'Payroll' },
+  { name: 'payslips', label: 'Payslips', icon: 'receipt', module: 'payroll', group: 'Payroll' },
+  { name: 'thirteenth', label: '13th Month', icon: 'journal', module: 'payroll', group: 'Payroll' },
+  { name: 'payrolldash', label: 'Payroll Dashboard', icon: 'grid', module: 'payroll', group: 'Payroll' },
+  { name: 'remittances', label: 'Remittances', icon: 'scale', module: 'payroll', group: 'Payroll' },
+  { name: 'payrollreports', label: 'Payroll Reports', icon: 'book', module: 'payroll', group: 'Payroll' },
   // --- Insights group (derived management reports) — HIDDEN for client clarity.
   //     Para ibalik: alisin lang ang comment sa dalawang linya sa baba.
   //     (Nakatago lang sa menu; gumagana pa ang routes /reports at /balance-sheet.)
