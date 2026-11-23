@@ -6,7 +6,7 @@ export const NAV = [
   { name: 'inventory', label: 'Inventory', icon: 'layers',   module: 'inventory',  group: 'Operations' },
   { name: 'purchases', label: 'Purchases', icon: 'cart',     module: 'purchases',  group: 'Operations' },
   { name: 'transfers', label: 'Transfers', icon: 'transfer', module: 'inventory',  group: 'Operations' },
-  { name: 'reconciliation', label: 'Reconcile', icon: 'scale', module: 'reconciliation', group: 'Operations' },
+  // { name: 'reconciliation', label: 'Reconcile', icon: 'scale', module: 'reconciliation', group: 'Operations' },
   { name: 'reconstock', label: 'Stock Recon', icon: 'scale', module: 'reconciliation', group: 'Operations' },
   { name: 'reconcash', label: 'Cash Recon', icon: 'wallet', module: 'reconciliation', group: 'Operations' },
   { name: 'reconcashless', label: 'Cashless Recon', icon: 'receipt', module: 'reconciliation', group: 'Operations' },
