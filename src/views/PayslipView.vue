@@ -30,7 +30,55 @@ async function load() {
   } catch (e) { error.value = e.response?.data?.message || 'Hindi ma-load ang payslip.'; }
   finally { loading.value = false; }
 }
-function printAll() { window.print(); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+
+function buildPrintHtml() {
+  const sheets = payslips.value.map((p) => `
+    <div class="slip">
+      <div class="ctr"><div class="co">${esc(p.company)}</div><div class="sub">PAYSLIP</div></div>
+      <div class="row">
+        <div><strong>${esc(p.employeeName)}</strong><br>${esc(p.employeeNumber)}${p.department ? ' · ' + esc(p.department) : ''}</div>
+        <div class="right">Period: ${esc(p.payrollPeriod)}<br>${d(p.periodStart)} → ${d(p.periodEnd)}<br>Payment: ${d(p.paymentDate)}</div>
+      </div>
+      <div class="cols">
+        <div class="col"><div class="hd">EARNINGS</div>
+          ${(p.earnings || []).map((e) => `<div class="ln"><span>${esc(e.label)}</span><span>${peso(e.amount)}</span></div>`).join('')}
+          <div class="ln tot"><span>Gross pay</span><span>${peso(p.grossPay)}</span></div></div>
+        <div class="col"><div class="hd">DEDUCTIONS</div>
+          ${(p.deductions || []).map((e) => `<div class="ln"><span>${esc(e.label)}</span><span>${peso(e.amount)}</span></div>`).join('')}
+          <div class="ln tot"><span>Total deductions</span><span>${peso(p.totalDeductions)}</span></div></div>
+      </div>
+      <div class="net"><span>NET PAY</span><span>${peso(p.netPay)}</span></div>
+      <div class="emp">Employer contributions (informational): SSS ${peso(p.employerContributions.sss)} · PhilHealth ${peso(p.employerContributions.philhealth)} · Pag-IBIG ${peso(p.employerContributions.pagibig)}</div>
+    </div>`).join('');
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Payslips</title><style>
+    *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+    body{margin:16px;color:#000}
+    .slip{border:1px solid #000;border-radius:8px;padding:16px;margin-bottom:14px;page-break-inside:avoid}
+    .ctr{text-align:center;margin-bottom:10px}.co{font-weight:bold;font-size:15px}.sub{color:#555;font-size:12px}
+    .row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:10px}.right{text-align:right}
+    .cols{display:flex;gap:24px}.col{flex:1}
+    .hd{font-weight:bold;font-size:12px;border-bottom:1px solid #000;margin-bottom:4px;padding-bottom:2px}
+    .ln{display:flex;justify-content:space-between;font-size:13px;padding:1px 0}
+    .tot{font-weight:bold;border-top:1px solid #000;margin-top:4px;padding-top:3px}
+    .net{display:flex;justify-content:space-between;font-weight:bold;border-top:2px solid #000;margin-top:10px;padding-top:6px;font-size:15px}
+    .emp{color:#555;font-size:11px;margin-top:8px}
+  </style></head><body>${sheets}</body></html>`;
+}
+
+function printAll() {
+  if (!payslips.value.length) return;
+  const iframe = document.createElement('iframe');
+  Object.assign(iframe.style, { position: 'fixed', right: '0', bottom: '0', width: '0', height: '0', border: '0' });
+  document.body.appendChild(iframe);
+  const doc = iframe.contentWindow.document;
+  doc.open(); doc.write(buildPrintHtml()); doc.close();
+  setTimeout(() => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    setTimeout(() => iframe.remove(), 1000);
+  }, 250);
+}
 onMounted(load);
 </script>
 
