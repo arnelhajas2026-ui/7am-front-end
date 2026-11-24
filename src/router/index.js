@@ -61,6 +61,7 @@ import ThirteenthMonthView from '../views/ThirteenthMonthView.vue';
 import PayrollDashboardView from '../views/PayrollDashboardView.vue';
 import RemittanceView from '../views/RemittanceView.vue';
 import PayrollReportsView from '../views/PayrollReportsView.vue';
+import ExecutiveDashboardView from '../views/ExecutiveDashboardView.vue';
 
 const routes = [
   { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
@@ -123,6 +124,7 @@ const routes = [
   { path: '/accounts',  name: 'accounts',  component: AccountsView,  meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/audit',     name: 'audittrail', component: AuditTrailView, meta: { requiresAuth: true, ownerOnly: true } },
   { path: '/settings',  name: 'settings',  component: SettingsView,  meta: { requiresAuth: true, ownerOnly: true } },
+  { path: '/operations-dashboard', name: 'execdashboard', component: ExecutiveDashboardView, meta: { requiresAuth: true, module: 'reports' } },
 ];
 
 const router = createRouter({ history: createWebHistory(), routes });

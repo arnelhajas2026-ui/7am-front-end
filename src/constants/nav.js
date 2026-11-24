@@ -1,6 +1,7 @@
 // Isang source of truth para sa navigation + access mapping.
 export const NAV = [
   { name: 'dashboard', label: 'Dashboard', icon: 'grid' },
+  { name: 'execdashboard', label: 'Operations Dashboard', icon: 'grid', module: 'reports', group: 'Insights' },
 
   { name: 'sales',     label: 'Sales',     icon: 'receipt',  module: 'sales',      group: 'Operations' },
   { name: 'inventory', label: 'Inventory', icon: 'layers',   module: 'inventory',  group: 'Operations' },

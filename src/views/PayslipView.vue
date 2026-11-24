@@ -9,9 +9,18 @@ const header = ref('');
 const error = ref('');
 const loading = ref(false);
 
+// Picker (kapag binuksan mula sa menu nang walang query)
+const fromPicker = ref(false);
+const runs = ref([]);
+const employees = ref([]);
+const pickRun = ref('');
+const pickEmployee = ref('');
+
 const peso = (n) => '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const d = (s) => s ? String(s).slice(0, 10) : '';
+const empName = (e) => e ? [e.firstName, e.lastName].filter(Boolean).join(' ') : '—';
 
+// ---- query-based load (mula sa Payroll Processing "Payslips" button) ----
 async function load() {
   loading.value = true; error.value = '';
   try {
@@ -30,8 +39,46 @@ async function load() {
   } catch (e) { error.value = e.response?.data?.message || 'Hindi ma-load ang payslip.'; }
   finally { loading.value = false; }
 }
-function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
 
+// ---- picker ----
+async function loadPickerData() {
+  try {
+    const [r, e] = await Promise.all([api.get('/payroll/processing/runs'), api.get('/payroll/employees')]);
+    runs.value = (r.data.runs || []).filter((x) => ['POSTED', 'PAID'].includes(x.status));
+    employees.value = e.data.employees || [];
+  } catch (err) { error.value = err.response?.data?.message || 'Hindi ma-load ang listahan.'; }
+}
+async function loadByRun() {
+  if (!pickRun.value) return;
+  loading.value = true; error.value = ''; payslips.value = [];
+  try {
+    const { data } = await api.get(`/payroll/processing/runs/${pickRun.value}/payslips`);
+    header.value = `${data.run.runCode} · ${data.run.payrollMonth} P${data.run.periodNumber}`;
+    payslips.value = data.payslips;
+  } catch (e) { error.value = e.response?.data?.message || 'Hindi ma-load.'; }
+  finally { loading.value = false; }
+}
+async function loadByEmployee() {
+  if (!pickEmployee.value) return;
+  loading.value = true; error.value = ''; payslips.value = [];
+  try {
+    const { data } = await api.get('/payroll/payslips', { params: { employee: pickEmployee.value } });
+    const emp = employees.value.find((x) => x._id === pickEmployee.value);
+    header.value = 'Payslip history — ' + empName(emp);
+    payslips.value = data.payslips;
+    if (!data.payslips.length) error.value = 'Walang POSTED/PAID na payslip ang empleyadong ito.';
+  } catch (e) { error.value = e.response?.data?.message || 'Hindi ma-load.'; }
+  finally { loading.value = false; }
+}
+function backToPicker() { payslips.value = []; header.value = ''; error.value = ''; }
+
+onMounted(() => {
+  if (route.query.run || route.query.employee || route.query.detail) load();
+  else { fromPicker.value = true; loadPickerData(); }
+});
+
+// ---- print (hidden iframe — hindi apektado ng app layout) ----
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
 function buildPrintHtml() {
   const sheets = payslips.value.map((p) => `
     <div class="slip">
@@ -65,7 +112,6 @@ function buildPrintHtml() {
     .emp{color:#555;font-size:11px;margin-top:8px}
   </style></head><body>${sheets}</body></html>`;
 }
-
 function printAll() {
   if (!payslips.value.length) return;
   const iframe = document.createElement('iframe');
@@ -79,19 +125,45 @@ function printAll() {
     setTimeout(() => iframe.remove(), 1000);
   }, 250);
 }
-onMounted(load);
 </script>
 
 <template>
   <div>
     <div class="d-print-none d-flex align-items-center justify-content-between mb-2">
       <h3 class="mb-0">Payslips <span class="text-muted small">{{ header }}</span></h3>
-      <button class="btn btn-primary btn-sm" @click="printAll">🖨 Print / Save PDF</button>
+      <div class="d-flex gap-2">
+        <button v-if="fromPicker && payslips.length" class="btn btn-ghost btn-sm" @click="backToPicker">← Pumili ng iba</button>
+        <button v-if="payslips.length" class="btn btn-primary btn-sm" @click="printAll">🖨 Print / Save PDF</button>
+      </div>
     </div>
     <div v-if="error" class="alert alert-danger py-2 d-print-none">{{ error }}</div>
-    <div v-if="loading" class="text-muted d-print-none">Loading…</div>
-    <div v-else-if="!payslips.length" class="text-muted d-print-none">Walang payslip.</div>
 
+    <!-- PICKER -->
+    <div v-if="fromPicker && !payslips.length && !loading" class="row g-3 d-print-none">
+      <div class="col-12 col-md-6"><div class="card h-100"><div class="card-body">
+        <p class="section-eyebrow mb-2">By payroll run</p>
+        <select v-model="pickRun" class="form-select form-select-sm mb-2">
+          <option value="">— Pumili ng run —</option>
+          <option v-for="r in runs" :key="r._id" :value="r._id">{{ r.runCode }} · {{ r.payrollMonth }} P{{ r.periodNumber }} ({{ r.status }})</option>
+        </select>
+        <button class="btn btn-primary btn-sm" :disabled="!pickRun" @click="loadByRun">Buksan ang payslips</button>
+        <p v-if="!runs.length" class="text-muted small mt-2 mb-0">Walang POSTED/PAID na run pa.</p>
+      </div></div></div>
+
+      <div class="col-12 col-md-6"><div class="card h-100"><div class="card-body">
+        <p class="section-eyebrow mb-2">By employee (history)</p>
+        <select v-model="pickEmployee" class="form-select form-select-sm mb-2">
+          <option value="">— Pumili ng empleyado —</option>
+          <option v-for="e in employees" :key="e._id" :value="e._id">{{ empName(e) }} ({{ e.employeeNumber }})</option>
+        </select>
+        <button class="btn btn-primary btn-sm" :disabled="!pickEmployee" @click="loadByEmployee">Ipakita ang history</button>
+      </div></div></div>
+    </div>
+
+    <div v-if="loading" class="text-muted d-print-none">Loading…</div>
+    <div v-else-if="!fromPicker && !payslips.length" class="text-muted d-print-none">Walang payslip.</div>
+
+    <!-- PAYSLIPS -->
     <div class="payslip-sheet" v-for="(p,i) in payslips" :key="i">
       <div class="text-center mb-2">
         <div class="fw-bold" style="font-size:1.05rem">{{ p.company }}</div>
