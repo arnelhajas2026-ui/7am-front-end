@@ -5,7 +5,13 @@ import api from '../services/api.js';
 const data = ref(null);
 const loading = ref(false);
 const error = ref('');
-const filters = ref({ location: 'All', period: 'today' });
+const filters = ref({ location: 'All', period: 'today', start: '', end: '' });
+function onPeriodChange() { if (filters.value.period !== 'custom') load(); }
+function openPicker(evt) {
+  const inp = evt.currentTarget.parentElement.querySelector('input');
+  if (inp && typeof inp.showPicker === 'function') { try { inp.showPicker(); return; } catch (e) { /* fallback */ } }
+  if (inp) inp.focus();
+}
 const showReplenish = ref(false);
 const tip = ref({ show: false, x: 0, y: 0, title: '', rows: [] });
 
@@ -102,9 +108,20 @@ onMounted(load);
       </div>
       <div class="mt-2 d-flex align-items-center gap-2">
         <div class="muted sm" style="width:92px">REPORTING PERIOD</div>
-        <select v-model="filters.period" class="ctl flex-grow-1" @change="load">
+        <select v-model="filters.period" class="ctl flex-grow-1" @change="onPeriodChange">
           <option v-for="p in (data?.filters?.periods || [])" :key="p.key" :value="p.key">{{ p.label }}</option>
         </select>
+      </div>
+      <div v-if="filters.period === 'custom'" class="mt-2 d-flex align-items-end gap-2 flex-wrap">
+        <div>
+          <div class="muted sm mb-1">FROM</div>
+          <div class="datewrap"><input type="date" v-model="filters.start" class="ctl dateinp" /><button class="calbtn" @click="openPicker" aria-label="Open calendar">📅</button></div>
+        </div>
+        <div>
+          <div class="muted sm mb-1">TO</div>
+          <div class="datewrap"><input type="date" v-model="filters.end" class="ctl dateinp" /><button class="calbtn" @click="openPicker" aria-label="Open calendar">📅</button></div>
+        </div>
+        <button class="tab active" style="height:fit-content" :disabled="!filters.start || !filters.end" @click="load">Apply</button>
       </div>
       <div v-if="data" class="mt-3">
         <div class="muted sm">SELECTED OPERATING LOCATION</div>
@@ -265,6 +282,11 @@ onMounted(load);
 .chip { background:#14361f; color:#36d47f; border-radius:20px; padding:3px 12px; font-size:.72rem; font-weight:600; }
 .chip.sm { padding:2px 9px; }
 .ctl { width:100%; background:#0c1016; color:#e6edf3; border:1px solid #273040; border-radius:10px; padding:9px 12px; font-size:.9rem; }
+.datewrap { position:relative; display:inline-block; }
+.dateinp { width:auto; padding-right:40px; color-scheme:dark; }
+.dateinp::-webkit-calendar-picker-indicator { opacity:0; }
+.calbtn { position:absolute; right:3px; top:50%; transform:translateY(-50%); background:#1a222d; border:1px solid #273040; border-radius:7px; font-size:.95rem; line-height:1; padding:5px 7px; cursor:pointer; }
+.calbtn:hover { background:#222c38; }
 .tabs { display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:12px; }
 .tab { white-space:nowrap; background:#11161d; color:#9aa7b5; border:1px solid #1e2631; border-radius:20px; padding:7px 14px; font-size:.82rem; font-weight:600; cursor:pointer; transition:all .12s; }
 .tab:hover { color:#e6edf3; border-color:#2a3442; }
